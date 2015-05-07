@@ -70,7 +70,38 @@ typedef uint64_t wlist_id_t;
 
 #define PTHREAD_BARRIER_SERIAL_THREAD    -1
 
+
+/******
+    MODIFICATIONS
+    ******/
+
 typedef struct {
+    int vc[MAX_THREADS];
+} thread_vc_t;
+
+void push_vc(thread_vc_t *in, thread_vc_t *out);
+void sync_vc(thread_vc_t *vc1, thread_vc_t *vc2);
+void increment_vc(thread_vc_t *in, pthread_t *thread);
+void clear_vc(thread_vc_t *in);
+void increment_thread_vc();
+thread_vc_t* getVC(pthread_t thread);
+void initVcLog();
+
+
+/******
+    MODIFICATIONS END
+    ********/
+
+
+typedef struct {
+
+/******
+    MODIFICATIONS
+    ********/
+  thread_vc_t vcs;
+/******
+    MODIFICATIONS END
+    ********/
   wlist_id_t wlist;
 
   void *ret_value;
@@ -81,6 +112,11 @@ typedef struct {
 } thread_data_t;
 
 typedef struct {
+
+    ///MODIFICATIONS
+    thread_vc_t lastHoldingVC;
+    ///MODIFICATIONS END
+
   wlist_id_t wlist;
 
   char taken;
@@ -92,6 +128,10 @@ typedef struct {
 } mutex_data_t;
 
 typedef struct {
+    ///MODIFICATIONS
+    thread_vc_t latestAccessVC;
+    ///MODIFICATIONS END
+
   wlist_id_t wlist;
 
   mutex_data_t *mutex;
@@ -99,6 +139,9 @@ typedef struct {
 } condvar_data_t;
 
 typedef struct {
+    ///MODIFICATIONS
+    thread_vc_t latestAccessVC;
+    ///MODIFICATIONS END
   wlist_id_t wlist;
 
   unsigned int curr_event;
@@ -107,6 +150,11 @@ typedef struct {
 } barrier_data_t;
 
 typedef struct {
+
+    ///MODIFICATIONS
+    thread_vc_t latestAccessVC;
+    ///MODIFICATIONS END
+
   wlist_id_t wlist_readers;
   wlist_id_t wlist_writers;
 
