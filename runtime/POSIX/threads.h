@@ -183,6 +183,10 @@ static inline void __thread_preempt(int yield) {
   klee_thread_preempt(yield);
 }
 
+static inline void __thread_vc_update(thread_vc_t *vc, pthread_t thread) {
+    klee_thread_vc_update(vc, thread);
+}
+
 static inline void __thread_sleep(uint64_t wlist) {
   klee_thread_sleep(wlist);
 }
