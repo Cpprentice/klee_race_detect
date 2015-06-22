@@ -156,7 +156,8 @@ extern "C" {
   void klee_thread_preempt(int yield);
 
   ///MODIFICATION
-  void klee_thread_vc_update(uint32_t **vc, uint32_t thread);
+  //void klee_thread_vc_update(uint32_t **vc, uint32_t thread);
+  void klee_thread_vc_update(uint32_t *vc, uint32_t thread, uint32_t maxThreads);
   ///MODIFICATION END
 
   void klee_thread_sleep(uint64_t wlist);

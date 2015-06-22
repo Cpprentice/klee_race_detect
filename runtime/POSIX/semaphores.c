@@ -52,7 +52,6 @@
 
 #include <klee/klee.h>
 
-
 ////////////////////////////////////////////////////////////////////////////////
 // POSIX Semaphores
 ////////////////////////////////////////////////////////////////////////////////
@@ -72,14 +71,14 @@ static sem_data_t *_get_sem_data(sem_posix_t *sem) {
 }
 
 int sem_init(sem_posix_t *sem, int pshared, unsigned int value) {
-  if (pshared != 0) 
+  if (pshared != 0)
         klee_report_error(__FILE__, __LINE__, "semaphore shared between processes is not supported", "user.err");
-  
+
   if(value > SEM_VALUE_MAX) {
     errno = EINVAL;
     return -1;
   }
-  
+
   sem_data_t *sdata = (sem_data_t*)malloc(sizeof(sem_data_t));
   memset(sdata, 0, sizeof(sem_data_t));
 
@@ -87,6 +86,10 @@ int sem_init(sem_posix_t *sem, int pshared, unsigned int value) {
 
   sdata->wlist = klee_get_wlist();
   sdata->count = value;
+
+  ///MODIFICATION
+  clear_vc(&sdata->latestAccessVC);
+  ///MODIFICATION END
 
   return 0;
 }
@@ -108,6 +111,9 @@ static int _atomic_sem_lock(sem_data_t *sdata, char try) {
       return -1;
     } else {
       __thread_sleep(sdata->wlist);
+      ///MODIFICATION
+      pull_thread_vc(&sdata->latestAccessVC);
+      ///MODIFICATION END
     }
   }
 
@@ -143,9 +149,12 @@ int sem_trywait(sem_posix_t *sem) {
 static int _atomic_sem_unlock(sem_data_t *sdata) {
   sdata->count++;
 
-  if (sdata->count <= 0)
+  if (sdata->count <= 0) {
+    ///MODIFICATION
+    push_thread_vc(&sdata->latestAccessVC);
+    ///MODIFICATON END
     __thread_notify_one(sdata->wlist);
-
+  }
   return 0;
 }
 

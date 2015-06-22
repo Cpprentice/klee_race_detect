@@ -81,6 +81,8 @@ static unsigned int format(char *target, unsigned int value) {
     }
 }
 
+
+
 void logVC(pthread_t thread, const char *src) {
     initVcLog();
 
@@ -168,7 +170,6 @@ void sync_vc(thread_vc_t *vc1, thread_vc_t *vc2) {
 void increment_vc(thread_vc_t *in, pthread_t *thread) {
     //a thread pointer is its own id
     in->vc[*thread]++;
-    __thread_vc_update(in, *thread);
 }
 
 void clear_vc(thread_vc_t *in) {
@@ -182,6 +183,8 @@ void increment_thread_vc() {
     thread_data_t *data = &__tsync.threads[self];
     thread_vc_t *vc = &data->vcs;
     increment_vc(vc, &self);
+
+    __thread_vc_update(vc, self);
 }
 
 thread_vc_t* getVC(pthread_t thread) {
@@ -197,7 +200,7 @@ void pull_thread_vc(thread_vc_t *input) {
     pthread_t self = pthread_self();
     thread_vc_t *vc = get_vc(self);
     push_vc(input, vc);
-    printf("&vc: 0x%x\n", vc);
+    //printf("&vc: 0x%x\n", vc);
     __thread_vc_update(vc, self);
 }
 
@@ -248,11 +251,12 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   tdata->wlist = klee_get_wlist();
 
 ///MODIFICATIONS
-    increment_thread_vc();
+
+
 
     //clear_vc(&(tdata->vcs));
     //thread_data_t *startingThreadData = &__tsync.threads[pthread_self()];
-    push_thread_vc(&tdata->vcs);
+
     //push_vc(&(startingThreadData->vcs), &(tdata->vcs));
 
     //logVC(pthread_self());
@@ -260,11 +264,26 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   klee_thread_create(newIdx, start_routine, arg);
   *thread = newIdx;
 
+  ///MODIFICATION
+
+   // printf("filler %i\n", newIdx);
+push_thread_vc(&tdata->vcs);
+
+    increment_vc(&tdata->vcs, &newIdx);
+
+
+__thread_vc_update(&tdata->vcs, newIdx);
+    //printf("filler %i\n", newIdx);
+    ///MODIFICATION END
+
   __thread_preempt(0);
 
 ///MODIFICATIONS
+
+increment_thread_vc();
     logVC(pthread_self(), "create");
     logVC(*thread, "create");
+
 ///MODIFICATIONS END
 
   return 0;
@@ -279,7 +298,7 @@ void pthread_exit(void *value_ptr) {
     tdata->ret_value = value_ptr;
 
     ///MODIFICATIONS
-    increment_thread_vc();
+    //increment_thread_vc();
     logMyVC("exit\t");
     ///MODIFICATIONS END
 
@@ -322,7 +341,7 @@ int pthread_join(pthread_t thread, void **value_ptr) {
     increment_thread_vc();
 
     //push_vc(&tdata->vcs, getVC(pthread_self()));
-    push_thread_vc(&tdata->vcs);
+    pull_thread_vc(&tdata->vcs);
 
     logMyVC("join\t");
 
@@ -488,10 +507,12 @@ static int _atomic_mutex_lock(mutex_data_t *mdata, char try) {
   mdata->owner = pthread_self();
 
   ///MODIFICATIONS
-  increment_thread_vc();
 
   //push_vc(&mdata->lastHoldingVC, getVC(pthread_self()));
   pull_thread_vc(&mdata->lastHoldingVC);
+
+
+  increment_thread_vc();
 
   logMyVC("mtx_lock");
 
@@ -545,10 +566,11 @@ static int _atomic_mutex_unlock(mutex_data_t *mdata) {
   mdata->taken = 0;
 
   ///MODIFICATIONS
-  increment_thread_vc();
+
   //push_vc(&mdata->lastHoldingVC, getVC(pthread_self()));
   //push_vc(getVC(pthread_self()), &mdata->lastHoldingVC);
   push_thread_vc(&mdata->lastHoldingVC);
+  increment_thread_vc();
   logMyVC("mtx_unlock");
   ///MODIFICATIONS END
 
@@ -672,9 +694,10 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
 static int _atomic_cond_notify(condvar_data_t *cdata, char all) {
   if (cdata->queued > 0) {
         ///MODIFICATION
-        increment_thread_vc();
+
         //push_vc(getVC(pthread_self()), &cdata->latestAccessVC);
         push_thread_vc(&cdata->latestAccessVC);
+        increment_thread_vc();
         logMyVC("cond_notify");
         ///MODIFICATION END
     if (all)
@@ -771,9 +794,10 @@ int pthread_barrier_wait(pthread_barrier_t *barrier) {
   --bdata->left;
 
   ///MODIFICATION
-    increment_thread_vc();
     //push_vc(getVC(pthread_self()), &bdata->latestAccessVC);
     push_thread_vc(&bdata->latestAccessVC);
+
+    increment_thread_vc();
     logMyVC("barrier_wait");
   ///MODIFICATION END
 
@@ -1010,9 +1034,11 @@ static int _atomic_rwlock_unlock(rwlock_data_t *rwdata) {
   }
 
   ///MODIFICATION
-  increment_thread_vc();
+
   //push_vc(getVC(pthread_self()), &rwdata->latestAccessVC);
   push_thread_vc(&rwdata->latestAccessVC);
+
+  increment_thread_vc();
   logMyVC("rw_unlock");
   ///MODIFICATION END
 

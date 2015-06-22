@@ -74,6 +74,12 @@ void klee_init_threads(void) {
         ///MODIFICATONS
         memset(&slot->vcs, 0, sizeof(thread_vc_t));
         //printf("%i:\t0x%x\t%i\n", i, &slot->vcs, slot->vcs.vc[0]);
+
+
+        //make the initial thread start with a 1 as VectorClock since 0 has a special meaning
+        if (i == DEFAULT_THREAD)
+            slot->vcs.vc[DEFAULT_THREAD]++;
+
         ///MODIFICATIONS END
     }
 
@@ -86,4 +92,10 @@ void klee_init_threads(void) {
     def_data->wlist = klee_get_wlist();
 
 
+    ///MODIFICATION
+
+    //uint32_t defThread = DEFAULT_THREAD;
+    //increment_vc(&def_data->vcs, &defThread);
+    //__thread_vc_update(&def_data->vcs, defThread);
+    ///MODIFICATION END
 }

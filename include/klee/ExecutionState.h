@@ -23,6 +23,12 @@
 #include <set>
 #include <vector>
 
+///MODIFICATION
+#include "../../lib/Core/VectorClock.h"
+#include "../../lib/Core/Memory.h"
+#include "../../lib/Core/RaceReport.h"
+///MODIFCIATION END
+
 namespace klee {
   class Array;
   struct KFunction;
@@ -41,13 +47,13 @@ public:
 
 private:
   // unsupported, use copy constructor
-  ExecutionState &operator=(const ExecutionState&); 
+  ExecutionState &operator=(const ExecutionState&);
   std::map< std::string, std::string > fnAliases;
 
 public:
   bool fakeState;
   unsigned depth;
-  
+
   ConstraintManager constraints;
   mutable double queryCost;
   double weight;
@@ -62,7 +68,7 @@ public:
   std::map<const std::string*, std::set<unsigned> > coveredLines;
   PTreeNode *ptreeNode;
 
-  /// ordered list of symbolics: used to generate test cases. 
+  /// ordered list of symbolics: used to generate test cases.
   //
   // FIXME: Move to a shared list structure (not critical).
   std::vector< std::pair<const MemoryObject*, const Array*> > symbolics;
@@ -118,21 +124,52 @@ public:
 
   /* Shortcut methods */
 
+  ///MODIFICATION
+  void updateVC(uint32_t tid, VectorClock &vc);
+
+  //const VectorClock& getCurrentVC() const;
+  //typedef std::map<uint32_t, VectorClock> access_containter_t;
+//  void handleMemoryAccess(MemoryObject *mo, MemoryObject::access_containter_t& accessContainer);
+//  void handleMemoryReadAccess(MemoryObject *mo);
+ // void handleMemoryWriteAccess(MemoryObject *mo);
+
+  void handleMemoryWriteAccess(ObjectState *os, KInstruction *kInst);
+  void handleMemoryReadAccess(ObjectState *os, KInstruction *kInst);
+  void handleMemoryAccess(ObjectState *os, ObjectState::access_containter_t &container, KInstruction *kInst);
+  void handleMemoryAccess(ObjectState *os, ObjectState::access_register_t &container, KInstruction *kInst);
+
+  void analyzeForRaceCondition(ObjectState *os, KInstruction *kInst);
+  //void analyzeForRaceCondition(MemoryObject *mo);
+  void analyzeForRaceCondition(std::map<uint32_t, VectorClock>::iterator iter1,
+                               std::map<uint32_t, VectorClock>::iterator end1,
+                               std::map<uint32_t, VectorClock>::iterator iter2,
+                               std::map<uint32_t, VectorClock>::iterator end2,
+                               ObjectState *os, KInstruction *kInst );
+  void analyzeForRaceCondition(ObjectState::access_register_t::iterator iter1,
+                               ObjectState::access_register_t::iterator end1,
+                               ObjectState::access_register_t::iterator iter2,
+                               ObjectState::access_register_t::iterator end2,
+                               ObjectState *os, KInstruction *kInst );
+
+ // std::set<RaceReport> reports;
+
+  ///MODIFICATION END
+
   Thread &crtThread() { return crtThreadIt->second; }
   const Thread &crtThread() const { return crtThreadIt->second; }
 
   KInstIterator& pc() { return crtThread().pc; }
   const KInstIterator& pc() const { return crtThread().pc; }
-  
+
   KInstIterator& prevPC() { return crtThread().prevPC; }
   const KInstIterator& prevPC() const { return crtThread().prevPC; }
- 
+
   Thread::stack_ty& stack() { return crtThread().stack; }
   const Thread::stack_ty& stack() const { return crtThread().stack; }
-  
+
   unsigned incomingBBIndex() { return crtThread().incomingBBIndex; }
   void incomingBBIndex(unsigned ibbi) { crtThread().incomingBBIndex = ibbi; }
-  
+
 private:
   ExecutionState() : fakeState(false), ptreeNode(0) {}
 
@@ -147,7 +184,7 @@ public:
   ExecutionState(const ExecutionState& state);
 
   ~ExecutionState();
-  
+
   ExecutionState *branch();
 
   void pushFrame(KInstIterator caller, KFunction *kf);
@@ -155,8 +192,8 @@ public:
   void popFrame();
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
-  void addConstraint(ref<Expr> e) { 
-    constraints.addConstraint(e); 
+  void addConstraint(ref<Expr> e) {
+    constraints.addConstraint(e);
   }
 
   bool merge(const ExecutionState &b);

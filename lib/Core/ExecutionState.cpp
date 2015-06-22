@@ -35,15 +35,15 @@
 using namespace llvm;
 using namespace klee;
 
-namespace { 
+namespace {
   cl::opt<bool>
   DebugLogStateMerge("debug-log-state-merge");
 }
 
-ExecutionState::ExecutionState(KFunction *kf) 
+ExecutionState::ExecutionState(KFunction *kf)
   : fakeState(false),
     depth(0),
-    queryCost(0.), 
+    queryCost(0.),
     weight(1),
     instsSinceCovNew(0),
     coveredNew(false),
@@ -54,7 +54,7 @@ ExecutionState::ExecutionState(KFunction *kf)
         setupMain(kf);
 }
 
-ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions) 
+ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
   : fakeState(true),
     constraints(assumptions),
     queryCost(0.),
@@ -68,6 +68,11 @@ void ExecutionState::setupMain(KFunction *kf) {
     Thread mainThread = Thread(0, kf);
     threads.insert(std::make_pair(mainThread.tid, mainThread));
     crtThreadIt = threads.begin();
+
+    ///MODIFICATION
+    uint32_t initVC = 1;
+    VectorClock vc(&initVC, 1);
+    ///MODIFCATION END
 }
 
 ExecutionState::~ExecutionState() {
@@ -147,7 +152,7 @@ void ExecutionState::popFrame() {
     popFrame(crtThread());
 }
 
-void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 
+void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) {
   mo->refCount++;
   symbolics.push_back(std::make_pair(mo, array));
 }
@@ -252,7 +257,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
                  << "--\n";
   if (pc() != b.pc())
     return false;
-  
+
   // XXX being conservative, how should be merged states with multiple threads?
   if (threads.size() != 1 || b.threads.size() != 1)
       return false;
@@ -280,7 +285,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
   }
 
   std::set< ref<Expr> > aConstraints(constraints.begin(), constraints.end());
-  std::set< ref<Expr> > bConstraints(b.constraints.begin(), 
+  std::set< ref<Expr> > bConstraints(b.constraints.begin(),
                                      b.constraints.end());
   std::set< ref<Expr> > commonConstraints, aSuffix, bSuffix;
   std::set_intersection(aConstraints.begin(), aConstraints.end(),
@@ -315,7 +320,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
 
   // We cannot merge if addresses would resolve differently in the
   // states. This means:
-  // 
+  //
   // 1. Any objects created since the branch in either object must
   // have been free'd.
   //
@@ -327,7 +332,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
     llvm::errs() << "A: " << addressSpace.objects << "\n";
     llvm::errs() << "B: " << b.addressSpace.objects << "\n";
   }
-    
+
   std::set<const MemoryObject*> mutated;
   MemoryMap::iterator ai = addressSpace.objects.begin();
   MemoryMap::iterator bi = b.addressSpace.objects.begin();
@@ -355,15 +360,15 @@ bool ExecutionState::merge(const ExecutionState &b) {
       llvm::errs() << "\t\tmappings differ\n";
     return false;
   }
-  
+
   // merge stack
 
   ref<Expr> inA = ConstantExpr::alloc(1, Expr::Bool);
   ref<Expr> inB = ConstantExpr::alloc(1, Expr::Bool);
-  for (std::set< ref<Expr> >::iterator it = aSuffix.begin(), 
+  for (std::set< ref<Expr> >::iterator it = aSuffix.begin(),
          ie = aSuffix.end(); it != ie; ++it)
     inA = AndExpr::create(inA, *it);
-  for (std::set< ref<Expr> >::iterator it = bSuffix.begin(), 
+  for (std::set< ref<Expr> >::iterator it = bSuffix.begin(),
          ie = bSuffix.end(); it != ie; ++it)
     inB = AndExpr::create(inB, *it);
 
@@ -388,12 +393,12 @@ bool ExecutionState::merge(const ExecutionState &b) {
     }
   }
 
-  for (std::set<const MemoryObject*>::iterator it = mutated.begin(), 
+  for (std::set<const MemoryObject*>::iterator it = mutated.begin(),
          ie = mutated.end(); it != ie; ++it) {
     const MemoryObject *mo = *it;
     const ObjectState *os = addressSpace.findObject(mo);
     const ObjectState *otherOS = b.addressSpace.findObject(mo);
-    assert(os && !os->readOnly && 
+    assert(os && !os->readOnly &&
            "objects mutated but not writable in merging state");
     assert(otherOS);
 
@@ -406,7 +411,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
   }
 
   constraints = ConstraintManager();
-  for (std::set< ref<Expr> >::iterator it = commonConstraints.begin(), 
+  for (std::set< ref<Expr> >::iterator it = commonConstraints.begin(),
          ie = commonConstraints.end(); it != ie; ++it)
     constraints.addConstraint(*it);
   constraints.addConstraint(OrExpr::create(inA, inB));
@@ -436,7 +441,7 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 
       out << ai->getName().str();
       // XXX should go through function
-      ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value; 
+      ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value;
       if (isa<ConstantExpr>(value))
         out << "=" << value;
     }
@@ -447,3 +452,288 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     target = sf.caller;
   }
 }
+
+///MODIFICATION
+
+#include "Common.h"
+
+    void ExecutionState::updateVC(uint32_t tid, VectorClock &vc)
+    {
+        //llvm::errs() << "called updateVC\n";
+        std::map<Thread::thread_id_t, Thread>::iterator iter = threads.find(tid);
+        //Thread& value =
+
+        //value.vc.import(vc);
+        if (iter == threads.end())
+            llvm::errs() << "updateVC error\n";
+            //printf("updateVC Error\n");
+        else
+        {
+            //printf("happens before? %i\n", iter->second.vc.happensBefore(vc));
+            iter->second.vc.import(vc);
+            //std::string Str;
+            //llvm::raw_string_ostream msg(Str);
+            //msg << "thread: " << tid  << "\t(" << iter->second.vc.toString() << ")";
+
+            //klee::klee_message("%s", msg.str().c_str());
+            //llvm::errs() << "thread: " << tid << " vc: " << vc.toString();
+        }
+
+    }
+/*
+    void ExecutionState::handleMemoryAccess(MemoryObject *mo, std::map<uint32_t, VectorClock>& accessContainer)
+    {
+        //printf("handleMemoryAccess(0x%x, %s)\n", mo, &accessContainer == &mo->lastReadAccesses? "read":"write");
+        //accessContainer.iterator_type iter;
+        //iter = accessContainer.find(crtThread()->getTid());
+        //if (iter == accessContainer.end())
+        {
+            accessContainer[crtThread().getTid()] = crtThread().vc;
+        }
+        //else
+        //{
+         //   accessContainer
+        //}
+
+        analyzeForRaceCondition(mo);
+    }
+
+    void ExecutionState::handleMemoryReadAccess(MemoryObject *mo)
+    {
+        handleMemoryAccess(mo, mo->lastReadAccesses);
+    }
+
+    void ExecutionState::handleMemoryWriteAccess(MemoryObject *mo)
+    {
+        handleMemoryAccess(mo, mo->lastWriteAccesses);
+    }
+*/
+    void ExecutionState::handleMemoryReadAccess(ObjectState *os, KInstruction *kInst)
+    {
+        //handleMemoryAccess(os, os->lastReadAccesses, kInst);
+        handleMemoryAccess(os, os->readAccesses, kInst);
+    }
+
+    void ExecutionState::handleMemoryWriteAccess(ObjectState *os, KInstruction *kInst)
+    {
+        //handleMemoryAccess(os, os->lastWriteAccesses, kInst);
+        handleMemoryAccess(os, os->writeAccesses, kInst);
+    }
+
+    void ExecutionState::handleMemoryAccess(ObjectState *os, ObjectState::access_containter_t &container, KInstruction *kInst)
+    {
+        container[crtThread().getTid()] = crtThread().vc;
+        analyzeForRaceCondition(os, kInst);
+    }
+
+    void ExecutionState::handleMemoryAccess(ObjectState *os, ObjectState::access_register_t &container, KInstruction *kInst)
+    {
+        //container[crtThread().getTid()] = crtThread().vc;
+
+        std::pair<uint32_t, MemoryAccessEntry> index(crtThread().getTid(), kInst);
+        container[index] = crtThread().vc;
+        //container[index].setOperation(crtThread().getTid(), kInst)
+
+        analyzeForRaceCondition(os, kInst);
+    }
+
+
+//#include "llvm/IR/Instructions.h"
+
+    void ExecutionState::analyzeForRaceCondition(ObjectState::access_register_t::iterator iter1,
+                                                 ObjectState::access_register_t::iterator end1,
+                                                 ObjectState::access_register_t::iterator iter2,
+                                                 ObjectState::access_register_t::iterator end2,
+                                                 ObjectState *os, KInstruction *kInst)
+    {
+        ObjectState::access_register_t::iterator start2 = iter2;
+
+        while(iter1 != end1)
+        {
+            iter2 = start2;
+            while (iter2 != end2)
+            {
+                if (iter1->first.first != iter2->first.first)
+                {
+                    if (!iter1->second.happensBefore(iter2->second) && !iter2->second.happensBefore(iter1->second))
+                    {
+                        if (kInst->info->file.find("POSIX") == std::string::npos && kInst->info->file.find("Intrinsic") == std::string::npos)
+                        {
+                            //RaceReport rr(iter2->first.first,iter1->first.first, kInst, os);
+                            RaceReport rr(iter1->first.first, kInst, os, iter2->first.second, iter2->first.first, iter1->second, iter2->second);
+
+                            std::pair<std::set<RaceReport>::iterator, bool> insertState = RaceReport::overallReports.insert(rr);
+                            if (insertState.second)
+                            {
+                                printf("%u\t%s\n", RaceReport::overallReports.size(), rr.toString().c_str());
+                            }
+                        }
+                    }
+                }
+                iter2++;
+            }
+            iter1++;
+        }
+    }
+
+    void ExecutionState::analyzeForRaceCondition(std::map<uint32_t, VectorClock>::iterator iter1,
+                                                std::map<uint32_t, VectorClock>::iterator end1,
+                                                std::map<uint32_t, VectorClock>::iterator iter2,
+                                                std::map<uint32_t, VectorClock>::iterator end2,
+                                                ObjectState *os, KInstruction *kInst)
+    {
+        //KInstruction *kInst = pc();
+        //const InstructionInfo *info = kInst->info;
+
+        std::map<uint32_t, VectorClock>::iterator start2 = iter2;
+
+        while(iter1 != end1)
+        {
+            iter2 = start2;
+            while (iter2 != end2)
+            {
+                if (iter1->first != iter2->first)
+                {
+                    if (!iter1->second.happensBefore(iter2->second) && !iter2->second.happensBefore(iter1->second))
+                    {
+                        if (kInst->info->file.find("POSIX") == std::string::npos && kInst->info->file.find("Intrinsic") == std::string::npos)
+                        {
+                            //llvm::Instruction *inst = kInst->inst;
+
+                                //std::string opcodeName = kInst->inst->getOpcodeName();
+                                //if (kInst->inst->getOpcode() == llvm::Instruction::Add) //if (opcodeName == "add") //if (opcodeName == "store" || opcodeName == "load")
+                                {
+                            //RaceReport rr(iter2->first, iter1->first, info->file, info->line);
+                            RaceReport rr(iter2->first,iter1->first, kInst, os);
+                            if (RaceReport::overallReports.find(rr) == RaceReport::overallReports.end())
+                            {
+
+
+                                RaceReport::overallReports.insert(rr);
+
+                                printf("%u\t%s\n", RaceReport::overallReports.size(), rr.toString().c_str());
+                                }
+                            }
+                        }
+                    }
+                    //printf("Race detected for mo: 0x%x between thread%i and thread%i at %s:%i\n", mo, rIter->first, wIter->first, info->file.c_str(), info->line);
+                }
+                iter2++;
+            }
+            iter1++;
+        }
+    }
+
+    void ExecutionState::analyzeForRaceCondition(ObjectState *os, KInstruction *kInst)
+    {
+ /*       std::map<uint32_t, VectorClock> &reads = os->lastReadAccesses;
+        std::map<uint32_t, VectorClock> &writes = os->lastWriteAccesses;
+
+        std::map<uint32_t, VectorClock>::iterator rIter = reads.begin();
+        std::map<uint32_t, VectorClock>::iterator wIter = writes.begin();
+
+        analyzeForRaceCondition(rIter, reads.end(), wIter, writes.end(), os, kInst);
+        analyzeForRaceCondition(wIter, writes.end(), wIter, writes.end(), os, kInst);
+ */
+        ObjectState::access_register_t &reads = os->readAccesses;
+        ObjectState::access_register_t &writes = os->writeAccesses;
+
+        ObjectState::access_register_t::iterator rIter = reads.begin();
+        ObjectState::access_register_t::iterator wIter = writes.begin();
+
+        analyzeForRaceCondition(rIter, reads.end(), wIter, writes.end(), os, kInst);
+        analyzeForRaceCondition(wIter, writes.end(), wIter, writes.end(), os, kInst);
+    }
+/*
+    void ExecutionState::analyzeForRaceCondition(MemoryObject *mo)
+    {
+        ///TODO the Race Detector goes here
+
+        std::map<uint32_t, VectorClock> &reads = mo->lastReadAccesses;
+        std::map<uint32_t, VectorClock> &writes = mo->lastWriteAccesses;
+
+        //MemoryObject::access_containter_t::iterator_type iter = mo->lastReadAccesses.begin();
+        std::map<uint32_t, VectorClock>::iterator rIter = reads.begin();
+        std::map<uint32_t, VectorClock>::iterator wIter = writes.begin();
+
+        analyzeForRaceCondition(rIter, reads.end(), wIter, writes.end());
+        analyzeForRaceCondition(wIter, writes.end(), wIter, writes.end());
+*/
+        //printf("raceAnalysis(0x%x) readers: %i\twriters: %i\n", mo, reads.size(), writes.size());
+/*
+        KInstruction *kInst = pc();
+        const InstructionInfo *info = kInst->info;
+
+
+        ///ANALYZE FOR RAW and WAR
+        while(rIter != reads.end())
+        {
+            wIter = writes.begin();
+            while (wIter != writes.end())
+            {
+                if (rIter->first != wIter->first)
+                {
+                    if (!rIter->second.happensBefore(wIter->second) && !wIter->second.happensBefore(rIter->second))
+                    {
+                        RaceReport rr(wIter->first, rIter->first, info->file, info->line);
+                        if (reports.find(rr) == reports.end())
+                        {
+                            reports.insert(rr);
+                            printf("%u\t%s\n", reports.size(), rr.toString().c_str());
+                        }
+                    }
+                    //printf("Race detected for mo: 0x%x between thread%i and thread%i at %s:%i\n", mo, rIter->first, wIter->first, info->file.c_str(), info->line);
+                }
+                wIter++;
+            }
+            rIter++;
+        }
+
+        std::map<uint32_t, VectorClock>::iterator wIter2 = writes.begin();
+        while (wIter2 != writes.end())
+        {
+            wIter = writes.begin();
+            while (wIter != writes.end())
+            {
+                if (wIter->first != wIter2->first)
+                {
+                    if (!wIter2->second.happensBefore(wIter->second) && !wIter->second.happensBefore(wIter2->second))
+                    {
+                        RaceReport rr(wIter->first, wIter2->first, info->file, info->line);
+                        if (reports.find(rr) == reports.end())
+                        {
+                            reports.insert(rr);
+                            printf("%u\t%s\n", reports.size(), rr.toString().c_str());
+                        }
+                    }
+                    //printf("Race detected for mo: 0x%x between thread%i and thread%i at %s:%i\n", mo, wIter2->first, wIter->first, info->file.c_str(), info->line);
+                }
+                wIter++;
+            }
+            wIter2++;
+        }*/
+/*
+        while(rIter != mo->lastReadAccesses.end() || wIter != mo->lastWriteAccesses.end())
+        {
+            if (rIter == mo->lastReadAccesses.end())
+            {
+                wIter++;
+            }
+            else if (wIter == mo->lastWriteAccesses.end())
+            {
+                rIter++;
+            }
+            else
+            {
+                wIter++;
+                rIter++;
+            }
+        }*/
+  //  }
+
+    //const VectorClock& ExecutionState::getCurrentVC() const
+    //{
+   //     return crtThread().vc;
+ //   }
+
+///MODIFICATION END

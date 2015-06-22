@@ -72,7 +72,7 @@ typedef uint64_t wlist_id_t;
     ******/
 
 typedef struct {
-    int vc[MAX_THREADS];
+    uint32_t vc[MAX_THREADS];
 } thread_vc_t;
 
 void push_vc(thread_vc_t *in, thread_vc_t *out);
@@ -83,6 +83,8 @@ void increment_thread_vc();
 thread_vc_t* getVC(pthread_t thread);
 void initVcLog();
 
+void pull_thread_vc(thread_vc_t *input);
+void push_thread_vc(thread_vc_t *output);
 
 /******
     MODIFICATIONS END
@@ -165,6 +167,10 @@ typedef struct {
 
     int count;
     char allocated;
+
+    ///MODIFICATION
+    thread_vc_t latestAccessVC;
+    ///MODIFICATION END
 } sem_data_t;
 
 typedef struct {
@@ -179,8 +185,18 @@ static inline void __thread_preempt(int yield) {
   klee_thread_preempt(yield);
 }
 
+static __attribute__((noinline)) uint32_t foo()
+{
+    int x = MAX_THREADS;
+    return x;
+}
+
 static inline void __thread_vc_update(thread_vc_t *vc, pthread_t thread) {
-    klee_thread_vc_update(vc, thread);
+    //printf("%u 0x%x %u\n", thread, vc, vc->vc[thread]);
+    printf("rt: %u %u %u\n", vc->vc[0], vc->vc[1], vc->vc[2]);
+    //printf("rt\n");
+    //foo();
+    klee_thread_vc_update(&vc->vc, thread, foo());
 }
 
 static inline void __thread_sleep(uint64_t wlist) {

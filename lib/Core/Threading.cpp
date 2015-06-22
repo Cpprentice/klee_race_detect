@@ -74,7 +74,6 @@ StackFrame::~StackFrame() {
 
 Thread::Thread(thread_id_t tid, KFunction * kf) :
   enabled(true), waitingList(0) {
-
   this->tid = tid;
 
   if (kf) {

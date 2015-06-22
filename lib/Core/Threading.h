@@ -57,6 +57,11 @@
 
 #include <map>
 
+
+///MODIFICATION
+#include "VectorClock.h"
+///MODIFICATION END
+
 namespace klee {
 
 struct StackFrame {
@@ -106,6 +111,10 @@ private:
   wlist_id_t waitingList;
 
   thread_id_t tid;
+
+  ///MODIFICATION
+    VectorClock vc;
+  ///MODIFICATION END
 public:
   Thread(thread_id_t tid, KFunction *start_function);
 

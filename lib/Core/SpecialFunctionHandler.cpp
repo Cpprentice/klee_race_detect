@@ -799,11 +799,101 @@ void SpecialFunctionHandler::handleThreadPreempt(ExecutionState &state,
 }
 
 ///MODIFICATION
+
+
+static unsigned int hex_format(char *target, unsigned int value) {
+    if (value < 16) {
+        if (value < 10)
+            *target = (char)value + '0';
+        else
+            *target = (char)(value - 10) + 'A';
+        return 1;
+    }
+    else {
+        unsigned int length = hex_format(target, value/16);
+        hex_format(target+1, value % 16);
+        return length + 1;
+    }
+}
+
+void print_memory(void *addr, size_t len)
+{
+    unsigned char *byte = (unsigned char*)addr;
+    uint32_t *data = (uint32_t*)malloc(len * sizeof(uint32_t));
+    char *resultString = (char*)malloc(len*3);
+    memset(resultString, 0, len * 3);
+    char *resultOffset = resultString;
+
+    for (size_t i = 0; i < len; i++) {
+        data[i] = *byte++;
+        //printf("%x ", data[i]);
+
+        char byteString[4];
+        memset(byteString, 0, 4);
+        uint32_t byteLength = hex_format(byteString, data[i]);
+
+        //printf("%u ", byteLength);
+        if (byteLength == 1) {
+            memset(resultOffset, '0', 1);
+            resultOffset++;
+        }
+
+        strncpy(resultOffset, byteString, byteLength);
+        resultOffset += byteLength;
+    }
+    printf("%s\n", resultString);
+
+    free(data);
+    free(resultString);
+}
+
 void SpecialFunctionHandler::handleThreadVCUpdate(ExecutionState &state,
                                                   KInstruction *target,
                                                   std::vector<ref<Expr> > &arguments) {
-    assert(arguments.size() == 2 && "invalid number of arguments to klee_handle_thread_vc_update");
+    assert(arguments.size() == 3 && "invalid number of arguments to klee_handle_thread_vc_update");
 
+    uint32_t *vc = (uint32_t*)cast<ConstantExpr>(arguments[0])->getZExtValue();
+    uint32_t tid = cast<ConstantExpr>(arguments[1])->getZExtValue();
+    uint32_t maxThreads = cast<ConstantExpr>(arguments[2])->getZExtValue();
+
+    VectorClock vectorClock(vc, maxThreads);
+    //klee::klee_message("%i %i %i", vc[0], vc[1], vc[2]);
+    state.updateVC(tid, vectorClock);
+
+//    print_memory(&vc, 8);
+ //   print_memory(vc, 4*16);
+  //  print_memory(&tid, 4);
+
+
+ //   ObjectPair op;
+ //   state.addressSpace.bindObject(op.first, op.second);
+//
+
+
+   /* if (!vcAddr->isZero()) {
+        if (!writeConcreteValue(state, vcAddr, state.crtThread().getTid(),
+                    executor.getWidthForLLVMType(Type::getInt64Ty(getGlobalContext()))))
+            return;
+    }
+*/
+/*    printf("%ul\n", sizeof(*arguments[0].get()));
+
+    for (size_t i = 0; i < arguments.size(); i++) {
+        Expr *ex = arguments[i].get();
+        int width = ex->getWidth();
+
+        //print_memory(ex, width / 8);
+        print_memory(ex, sizeof(*ex));
+        //uint32_t *
+*/
+        //printf("arg %i width %i\n", i, width);
+/*        if (width == 32)
+            printf("0x%x\n", (uint32_t*)ex);
+        else
+            printf("0x%x%x\n", (uint32_t*)ex, ((uint32_t*)ex)+1);
+
+    }*/
+/*
     ref<Expr> pVcR = executor.toUnique(state, arguments[0]);
 
     ref<Expr> tidR = executor.toUnique(state, arguments[1]);
@@ -819,7 +909,7 @@ void SpecialFunctionHandler::handleThreadVCUpdate(ExecutionState &state,
         printf("%04i:\t%x %x %x %x\n", index, (uint32_t*)&pVcR, ((uint32_t*) &pVcR)+1, ((uint32_t*) &pVcR)+2, ((uint32_t*) &pVcR)+3 );
         index += 16;
     }
-    printf("0x%x:\t%x\n", *(uint32_t*)&pVcR, **(uint32_t**)&pVcR);
+    printf("0x%x:\t%x\n", *(uint32_t*)&pVcR, **(uint32_t**)&pVcR);*/
 }
 ///MODIFICATION END
 
