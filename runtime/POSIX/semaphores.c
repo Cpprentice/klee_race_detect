@@ -88,7 +88,7 @@ int sem_init(sem_posix_t *sem, int pshared, unsigned int value) {
   sdata->count = value;
 
   ///MODIFICATION
-  clear_vc(&sdata->latestAccessVC);
+  vc_clear(sdata->last_vc);
   ///MODIFICATION END
 
   return 0;
@@ -112,7 +112,9 @@ static int _atomic_sem_lock(sem_data_t *sdata, char try) {
     } else {
       __thread_sleep(sdata->wlist);
       ///MODIFICATION
-      pull_thread_vc(&sdata->latestAccessVC);
+      vc_thread_pull(sdata->last_vc);
+      vc_thread_incr();
+      vc_thread_update();
       ///MODIFICATION END
     }
   }
@@ -151,7 +153,9 @@ static int _atomic_sem_unlock(sem_data_t *sdata) {
 
   if (sdata->count <= 0) {
     ///MODIFICATION
-    push_thread_vc(&sdata->latestAccessVC);
+    vc_thread_push(sdata->last_vc);
+    vc_thread_incr();
+    vc_thread_update();
     ///MODIFICATON END
     __thread_notify_one(sdata->wlist);
   }

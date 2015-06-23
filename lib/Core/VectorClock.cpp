@@ -11,12 +11,9 @@ namespace klee
     {
         for (uint32_t i = 0; i < size; i++)
         {
-            _clockMap[i] = vc[i];
+            if (vc[i] > 0)
+                _clockMap[i] = vc[i];
         }
-
- //       _accessInstruction = 0;
-  //      _accessThreadID = 0;
-        //std::cerr << "created vc" << std::endl;
     }
 
     VectorClock::VectorClock()
@@ -26,7 +23,6 @@ namespace klee
 
     void VectorClock::import(const VectorClock &other)
     {
-        //std::cerr << "called vc->import" << std::endl;
         std::map<uint64_t, uint32_t>::const_iterator importIterator = other._clockMap.begin();
         while (importIterator != other._clockMap.end())
         {
@@ -41,11 +37,10 @@ namespace klee
     {
         for (uint32_t i = 0; i < size; i++)
         {
-            if (_clockMap[i] < vc[i])
-                _clockMap[i] = vc[i];
+            if (vc[i] > 0)
+                if (_clockMap[i] < vc[i])
+                    _clockMap[i] = vc[i];
         }
-
-
     }
 
     std::string VectorClock::toString() const
@@ -118,11 +113,4 @@ namespace klee
         }
         return (greaterExists && allLessOrEqual);
     }
-/*
-    void VectorClock::setOperation(uint32_t threadID, KInstruction *kInst)
-    {
-        _accessThreadID = threadID;
-        _accessInstruction = kInst;
-    }
-    */
 }

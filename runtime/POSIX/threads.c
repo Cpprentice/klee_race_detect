@@ -59,6 +59,69 @@
     MODIFICATION
     ********/
 
+void vc_clear(vc_t in)
+{
+    memset(in, 0, sizeof(vc_t));
+}
+
+void vc_push(vc_t in, vc_t out)
+{
+    int i;
+    for (i = 0; i < MAX_THREADS; i++)
+        if (in[i] > out[i])
+            out[i] = in[i];
+}
+
+void vc_incr(vc_t in, pthread_t thread)
+{
+    in[thread]++;
+}
+
+uint32_t* vc_get(pthread_t thread)
+{
+    return __tsync.threads[thread].vc;
+}
+
+void vc_update(vc_t in, pthread_t thread)
+{
+    __thread_vc_update(in, thread);
+}
+
+void vc_thread_incr()
+{
+    pthread_t self = pthread_self();
+    vc_incr(vc_get(self), self);
+}
+
+void vc_thread_push(vc_t out)
+{
+    pthread_t self = pthread_self();
+    vc_push(vc_get(self), out);
+}
+
+void vc_thread_pull(vc_t in)
+{
+    pthread_t self = pthread_self();
+    vc_push(in, vc_get(self));
+}
+
+void vc_thread_update()
+{
+    pthread_t self = pthread_self();
+    vc_update(vc_get(self), self);
+}
+
+
+
+
+
+
+
+
+
+
+
+
 FILE *vcLog;
 int initializedVCLog = 0;
 
@@ -93,7 +156,6 @@ void logVC(pthread_t thread, const char *src) {
     memset(buffer, 0, size);
 
     int index = 0;
-    thread_vc_t *vc = getVC(thread);
     index += format(buffer+index, thread);
 
     buffer[index++] = ' ';
@@ -104,12 +166,12 @@ void logVC(pthread_t thread, const char *src) {
     memcpy(buffer+index, "\t(", 2);
     index += 2;
 
-
+uint32_t* vc = vc_get(thread);
 
     int i;
     for (i = 0; i < MAX_THREADS; i++) {
         if (__tsync.threads[i].allocated == 1) {
-            index += format(buffer+index, vc->vc[i]); //index += sprintf(buffer+index, "%i, ", vc->vc[i]);//fprintf(vcLog, "%i, ", vc->vc[i]);
+            index += format(buffer+index, vc[i]); //index += sprintf(buffer+index, "%i, ", vc->vc[i]);//fprintf(vcLog, "%i, ", vc->vc[i]);
 
             memcpy(buffer+index, ", ", 2);
             index += 2;
@@ -152,7 +214,7 @@ void closeVcLog() {
 
 
 
-
+/*
 void push_vc(thread_vc_t *in, thread_vc_t *out) {
     //printf("0x%x -> 0x%x\n", in, out);
     int i;
@@ -208,7 +270,7 @@ void pull_thread_vc(thread_vc_t *input) {
 void push_thread_vc(thread_vc_t *output) {
     push_vc(get_vc(pthread_self()), output);
 }
-
+*/
 /*******
     MODIFICATION END
     ********/
@@ -250,41 +312,20 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   tdata->joinable = 1; // TODO: Read this from an attribute
   tdata->wlist = klee_get_wlist();
 
-///MODIFICATIONS
-
-
-
-    //clear_vc(&(tdata->vcs));
-    //thread_data_t *startingThreadData = &__tsync.threads[pthread_self()];
-
-    //push_vc(&(startingThreadData->vcs), &(tdata->vcs));
-
-    //logVC(pthread_self());
-///MODIFICATIONS END
   klee_thread_create(newIdx, start_routine, arg);
   *thread = newIdx;
 
   ///MODIFICATION
-
-   // printf("filler %i\n", newIdx);
-push_thread_vc(&tdata->vcs);
-
-    increment_vc(&tdata->vcs, &newIdx);
-
-
-__thread_vc_update(&tdata->vcs, newIdx);
-    //printf("filler %i\n", newIdx);
-    ///MODIFICATION END
+  vc_thread_push(tdata->vc);
+  vc_incr(tdata->vc, *thread);
+  vc_update(tdata->vc, *thread);
+  vc_thread_incr();
+  vc_thread_update();
+  logVC(*thread, "create");
+  logVC(pthread_self(), "create");
+  ///MODIFICATION END
 
   __thread_preempt(0);
-
-///MODIFICATIONS
-
-increment_thread_vc();
-    logVC(pthread_self(), "create");
-    logVC(*thread, "create");
-
-///MODIFICATIONS END
 
   return 0;
 }
@@ -298,7 +339,6 @@ void pthread_exit(void *value_ptr) {
     tdata->ret_value = value_ptr;
 
     ///MODIFICATIONS
-    //increment_thread_vc();
     logMyVC("exit\t");
     ///MODIFICATIONS END
 
@@ -338,14 +378,11 @@ int pthread_join(pthread_t thread, void **value_ptr) {
     __thread_sleep(tdata->wlist);
 
     ///MODIFICATIONS
-    increment_thread_vc();
-
-    //push_vc(&tdata->vcs, getVC(pthread_self()));
-    pull_thread_vc(&tdata->vcs);
+    vc_thread_pull(tdata->vc);
+    vc_thread_incr();
+    vc_thread_update();
 
     logMyVC("join\t");
-
-
     ///MODIFICATIONS END
 
   if (value_ptr) {
@@ -458,7 +495,7 @@ static void _mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
     mdata->count = -1;
 
     ///MODIFICATIONS
-    clear_vc(&mdata->lastHoldingVC);
+    vc_clear(mdata->last_vc);
     ///MODIFICATIONS END
 }
 
@@ -507,17 +544,10 @@ static int _atomic_mutex_lock(mutex_data_t *mdata, char try) {
   mdata->owner = pthread_self();
 
   ///MODIFICATIONS
-
-  //push_vc(&mdata->lastHoldingVC, getVC(pthread_self()));
-  pull_thread_vc(&mdata->lastHoldingVC);
-
-
-  increment_thread_vc();
-
+  vc_thread_pull(mdata->last_vc);
+  vc_thread_incr();
+  vc_thread_update();
   logMyVC("mtx_lock");
-
-  //memcpy(getVC(pthread_self()), &mdata->lastHoldingVC, sizeof(thread_vc_t));
-  //memcpy(&mdata->lastHoldingVC, getVC(mdata->owner), sizeof(thread_vc_t));
   ///MODIFICATIONS END
 
   if(mdata->count != -1)
@@ -566,11 +596,9 @@ static int _atomic_mutex_unlock(mutex_data_t *mdata) {
   mdata->taken = 0;
 
   ///MODIFICATIONS
-
-  //push_vc(&mdata->lastHoldingVC, getVC(pthread_self()));
-  //push_vc(getVC(pthread_self()), &mdata->lastHoldingVC);
-  push_thread_vc(&mdata->lastHoldingVC);
-  increment_thread_vc();
+  vc_thread_push(mdata->last_vc);
+  vc_thread_incr();
+  vc_thread_update();
   logMyVC("mtx_unlock");
   ///MODIFICATIONS END
 
@@ -607,7 +635,7 @@ static void _cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
 
 
     ///MODIFICATIONS
-    clear_vc(&cdata->latestAccessVC);
+    vc_clear(cdata->last_vc);
     ///MODIFICATIONS END
 }
 
@@ -668,10 +696,10 @@ static int _atomic_cond_wait(condvar_data_t *cdata, mutex_data_t *mdata) {
   }
 
   ///MODIFICATION
-    increment_thread_vc();
-    //push_vc(&cdata->latestAccessVC, getVC(pthread_self()));
-    pull_thread_vc(&cdata->latestAccessVC);
-    logMyVC("cond_wait");
+  vc_thread_pull(cdata->last_vc);
+  vc_thread_incr();
+  vc_thread_update();
+  logMyVC("cond_wait");
   ///MODIFICATION END
 
   return 0;
@@ -694,10 +722,9 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
 static int _atomic_cond_notify(condvar_data_t *cdata, char all) {
   if (cdata->queued > 0) {
         ///MODIFICATION
-
-        //push_vc(getVC(pthread_self()), &cdata->latestAccessVC);
-        push_thread_vc(&cdata->latestAccessVC);
-        increment_thread_vc();
+        vc_thread_push(cdata->last_vc);
+        vc_thread_incr();
+        vc_thread_update();
         logMyVC("cond_notify");
         ///MODIFICATION END
     if (all)
@@ -752,7 +779,7 @@ static void _barrier_init(pthread_barrier_t *barrier, const pthread_barrierattr_
 
 
     ///MODIFICATIONS
-    clear_vc(&bdata->latestAccessVC);
+    vc_clear(bdata->last_vc);
     ///MODIFICATIONS END
 }
 
@@ -794,11 +821,8 @@ int pthread_barrier_wait(pthread_barrier_t *barrier) {
   --bdata->left;
 
   ///MODIFICATION
-    //push_vc(getVC(pthread_self()), &bdata->latestAccessVC);
-    push_thread_vc(&bdata->latestAccessVC);
-
-    increment_thread_vc();
-    logMyVC("barrier_wait");
+  vc_thread_push(bdata->last_vc);
+  logMyVC("barrier_wait");
   ///MODIFICATION END
 
   if (bdata->left == 0) {
@@ -816,9 +840,9 @@ int pthread_barrier_wait(pthread_barrier_t *barrier) {
   }
 
   ///MODIFICATION
-  increment_thread_vc();
-  //push_vc(&bdata->latestAccessVC, getVC(pthread_self()));
-  pull_thread_vc(&bdata->latestAccessVC);
+  vc_thread_pull(bdata->last_vc);
+  vc_thread_incr();
+  vc_thread_update();
   logMyVC("barrier_wait");
   ///MODIFICATION END
 
@@ -841,7 +865,7 @@ static void _rwlock_init(pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *a
 
 
     ///MODIFICATIONS
-    clear_vc(&rwdata->latestAccessVC);
+    vc_clear(rwdata->last_vc);
     ///MODIFICATIONS END
 }
 
@@ -886,9 +910,9 @@ static int _atomic_rwlock_rdlock(rwlock_data_t *rwdata, char try) {
 
     ///MODIFICATION
     if (rwdata->nr_readers == 1) { //this is the only reader: just changed state from unlocked
-        increment_thread_vc();
-        //push_vc(&rwdata->latestAccessVC, getVC(pthread_self()));
-        pull_thread_vc(&rwdata->latestAccessVC);
+        vc_thread_pull(rwdata->last_vc);
+        vc_thread_incr();
+        vc_thread_update();
         logMyVC("rw_rdlock");
     }
     ///MODIFICATION END
@@ -913,9 +937,9 @@ static int _atomic_rwlock_rdlock(rwlock_data_t *rwdata, char try) {
 
     ///MODIFICATION
     //just changed from writing to reading via unlocked
-    increment_thread_vc();
-    //push_vc(&rwdata->latestAccessVC, getVC(pthread_self()));
-    pull_thread_vc(&rwdata->latestAccessVC);
+    vc_thread_pull(rwdata->last_vc);
+    vc_thread_incr();
+    vc_thread_update();
     logMyVC("rw_rdlock");
     ///MODIFICATION END
   }
@@ -959,9 +983,9 @@ static int _atomic_rwlock_wrlock(rwlock_data_t *rwdata, char try) {
     rwdata->writer = pthread_self();
 
     ///MODIFICATIONS
-    increment_thread_vc();
-    //push_vc(&rwdata->latestAccessVC, getVC(pthread_self()));
-    pull_thread_vc(&rwdata->latestAccessVC);
+    vc_thread_pull(rwdata->last_vc);
+    vc_thread_incr();
+    vc_thread_update();
     logMyVC("rw_wrlock");
     ///MODIFICATIONS END
 
@@ -984,9 +1008,9 @@ static int _atomic_rwlock_wrlock(rwlock_data_t *rwdata, char try) {
     --rwdata->nr_writers_queued;
 
     ///MODIFICATIONS
-    increment_thread_vc();
-    //push_vc(&rwdata->latestAccessVC, getVC(pthread_self()));
-    pull_thread_vc(&rwdata->latestAccessVC);
+    vc_thread_pull(rwdata->last_vc);
+    vc_thread_incr();
+    vc_thread_update();
     logMyVC("rw_wrlock");
     ///MODIFICATIONS END
   }
@@ -1034,11 +1058,9 @@ static int _atomic_rwlock_unlock(rwlock_data_t *rwdata) {
   }
 
   ///MODIFICATION
-
-  //push_vc(getVC(pthread_self()), &rwdata->latestAccessVC);
-  push_thread_vc(&rwdata->latestAccessVC);
-
-  increment_thread_vc();
+  vc_thread_push(rwdata->last_vc);
+  vc_thread_incr();
+  vc_thread_update();
   logMyVC("rw_unlock");
   ///MODIFICATION END
 

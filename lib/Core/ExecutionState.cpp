@@ -471,11 +471,11 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
         {
             //printf("happens before? %i\n", iter->second.vc.happensBefore(vc));
             iter->second.vc.import(vc);
-            //std::string Str;
-            //llvm::raw_string_ostream msg(Str);
-            //msg << "thread: " << tid  << "\t(" << iter->second.vc.toString() << ")";
+     //       std::string Str;
+     //       llvm::raw_string_ostream msg(Str);
+     //       msg << "thread: " << tid  << "\t(" << iter->second.vc.toString() << ")";
 
-            //klee::klee_message("%s", msg.str().c_str());
+     //       klee::klee_message("%s", msg.str().c_str());
             //llvm::errs() << "thread: " << tid << " vc: " << vc.toString();
         }
 

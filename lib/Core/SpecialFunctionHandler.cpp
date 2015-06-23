@@ -856,8 +856,10 @@ void SpecialFunctionHandler::handleThreadVCUpdate(ExecutionState &state,
     uint32_t tid = cast<ConstantExpr>(arguments[1])->getZExtValue();
     uint32_t maxThreads = cast<ConstantExpr>(arguments[2])->getZExtValue();
 
+    klee::klee_message("%i %i %i", vc[0], vc[1], vc[2]);
+
     VectorClock vectorClock(vc, maxThreads);
-    //klee::klee_message("%i %i %i", vc[0], vc[1], vc[2]);
+
     state.updateVC(tid, vectorClock);
 
 //    print_memory(&vc, 8);

@@ -71,20 +71,18 @@ typedef uint64_t wlist_id_t;
     MODIFICATIONS
     ******/
 
-typedef struct {
-    uint32_t vc[MAX_THREADS];
-} thread_vc_t;
+typedef uint32_t vc_t[MAX_THREADS];
 
-void push_vc(thread_vc_t *in, thread_vc_t *out);
-void sync_vc(thread_vc_t *vc1, thread_vc_t *vc2);
-void increment_vc(thread_vc_t *in, pthread_t *thread);
-void clear_vc(thread_vc_t *in);
-void increment_thread_vc();
-thread_vc_t* getVC(pthread_t thread);
-void initVcLog();
+void vc_clear(vc_t in);
+void vc_push(vc_t in, vc_t out);
+void vc_incr(vc_t in, pthread_t thread);
+uint32_t* vc_get(pthread_t thread);
+void vc_update(vc_t in, pthread_t thread);
 
-void pull_thread_vc(thread_vc_t *input);
-void push_thread_vc(thread_vc_t *output);
+void vc_thread_incr();
+void vc_thread_push(vc_t out);
+void vc_thread_pull(vc_t in);
+void vc_thread_update();
 
 /******
     MODIFICATIONS END
@@ -93,13 +91,10 @@ void push_thread_vc(thread_vc_t *output);
 
 typedef struct {
 
-/******
-    MODIFICATIONS
-    ********/
-  thread_vc_t vcs;
-/******
-    MODIFICATIONS END
-    ********/
+
+///MODIFICATIONS
+  vc_t vc;
+///MODIFICATIONS END
   wlist_id_t wlist;
 
   void *ret_value;
@@ -112,7 +107,7 @@ typedef struct {
 typedef struct {
 
     ///MODIFICATIONS
-    thread_vc_t lastHoldingVC;
+    vc_t last_vc;
     ///MODIFICATIONS END
 
   wlist_id_t wlist;
@@ -127,7 +122,7 @@ typedef struct {
 
 typedef struct {
     ///MODIFICATIONS
-    thread_vc_t latestAccessVC;
+    vc_t last_vc;
     ///MODIFICATIONS END
 
   wlist_id_t wlist;
@@ -138,7 +133,7 @@ typedef struct {
 
 typedef struct {
     ///MODIFICATIONS
-    thread_vc_t latestAccessVC;
+    vc_t last_vc;
     ///MODIFICATIONS END
   wlist_id_t wlist;
 
@@ -150,7 +145,7 @@ typedef struct {
 typedef struct {
 
     ///MODIFICATIONS
-    thread_vc_t latestAccessVC;
+    vc_t last_vc;
     ///MODIFICATIONS END
 
   wlist_id_t wlist_readers;
@@ -169,7 +164,7 @@ typedef struct {
     char allocated;
 
     ///MODIFICATION
-    thread_vc_t latestAccessVC;
+    vc_t last_vc;
     ///MODIFICATION END
 } sem_data_t;
 
@@ -185,19 +180,27 @@ static inline void __thread_preempt(int yield) {
   klee_thread_preempt(yield);
 }
 
-static __attribute__((noinline)) uint32_t foo()
-{
-    int x = MAX_THREADS;
-    return x;
-}
-
-static inline void __thread_vc_update(thread_vc_t *vc, pthread_t thread) {
+///MODIFICATION
+/*static inline void __thread_vc_update(thread_vc_t *vc, pthread_t thread) {
     //printf("%u 0x%x %u\n", thread, vc, vc->vc[thread]);
     printf("rt: %u %u %u\n", vc->vc[0], vc->vc[1], vc->vc[2]);
     //printf("rt\n");
     //foo();
     klee_thread_vc_update(&vc->vc, thread, foo());
+
+}*/
+
+static inline void __thread_vc_update(vc_t vc, pthread_t thread)
+{
+    printf("rt: %u %u %u\n", vc[0], vc[1], vc[2]);
+    //printf("rt: %u\n", vc[0]);
+    //uint32_t temp = vc[0] + vc[1];
+    //vc_t temp;
+    //memcpy(temp, vc, sizeof(vc_t));
+    //printf("rt: %u %u %u\n", temp[0], temp[1], temp[2]);
+    klee_thread_vc_update(vc, thread, MAX_THREADS);
 }
+///MODIFICATION END
 
 static inline void __thread_sleep(uint64_t wlist) {
   klee_thread_sleep(wlist);
