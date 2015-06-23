@@ -861,8 +861,11 @@ static void _rwlock_init(pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *a
 
   rwdata->wlist_readers = klee_get_wlist();
   rwdata->wlist_writers = klee_get_wlist();
-  rwdata->nr_readers = 0;
 
+  rwdata->nr_readers = 0;
+  rwdata->nr_readers_queued = 0;
+  rwdata->nr_writers_queued = 0;
+  rwdata->writer_taken = 0;
 
     ///MODIFICATIONS
     vc_clear(rwdata->last_vc);
@@ -901,7 +904,7 @@ static int _atomic_rwlock_rdlock(rwlock_data_t *rwdata, char try) {
     return -1;
   }
 
-  if (rwdata->writer == 0 && rwdata->nr_writers_queued == 0) {
+  if (!rwdata->writer_taken && rwdata->nr_writers_queued == 0) {
     if (++rwdata->nr_readers == 0) {
       --rwdata->nr_readers;
       errno = EAGAIN;
@@ -979,8 +982,9 @@ static int _atomic_rwlock_wrlock(rwlock_data_t *rwdata, char try) {
     return -1;
   }
 
-  if (rwdata->writer == 0 && rwdata->nr_readers == 0) {
+  if (!rwdata->writer_taken && rwdata->nr_readers == 0) {
     rwdata->writer = pthread_self();
+    rwdata->writer_taken = 1;
 
     ///MODIFICATIONS
     vc_thread_pull(rwdata->last_vc);
@@ -1005,6 +1009,7 @@ static int _atomic_rwlock_wrlock(rwlock_data_t *rwdata, char try) {
 
     __thread_sleep(rwdata->wlist_writers);
     rwdata->writer = pthread_self();
+    rwdata->writer_taken = 1;
     --rwdata->nr_writers_queued;
 
     ///MODIFICATIONS
@@ -1013,6 +1018,7 @@ static int _atomic_rwlock_wrlock(rwlock_data_t *rwdata, char try) {
     vc_thread_update();
     logMyVC("rw_wrlock");
     ///MODIFICATIONS END
+
   }
 
   return 0;
@@ -1050,9 +1056,12 @@ static int _atomic_rwlock_unlock(rwlock_data_t *rwdata) {
     return -1;
   }
 
-  if (rwdata->writer != 0)
-    rwdata->writer = 0;
-  else {
+  if (rwdata->writer_taken && rwdata->writer == pthread_self())
+    rwdata->writer_taken = 0;
+  else if (rwdata->writer_taken && rwdata->writer != pthread_self()) {
+    errno = EPERM;
+    return -1;
+  } else {
     if (rwdata->nr_readers > 0)
       --rwdata->nr_readers;
   }
