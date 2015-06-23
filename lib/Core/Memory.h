@@ -43,6 +43,7 @@ private:
   mutable unsigned refCount;
 
   ///MODIFICATION
+  /*
 public:
 
   typedef std::map<uint32_t, VectorClock> access_containter_t;
@@ -50,7 +51,7 @@ private:
 
   access_containter_t lastReadAccesses;
   access_containter_t lastWriteAccesses;
-  ///MODIFICATION END
+  *////MODIFICATION END
 public:
   unsigned id;
   uint64_t address;
@@ -163,7 +164,11 @@ class ObjectState {
 
       ///MODIFICATION
 public:
+    typedef std::set<MemoryAccessEntry> access_register_t;
+    typedef std::set<MemoryAccessEntry>::iterator access_iterator_t;
 
+    access_register_t memOperations;
+/*
   typedef std::map<uint32_t, VectorClock> access_containter_t;
   typedef std::map<std::pair<uint32_t, MemoryAccessEntry>, VectorClock> access_register_t;
 //private:
@@ -172,7 +177,7 @@ public:
   access_containter_t lastWriteAccesses;
 
   access_register_t readAccesses;
-  access_register_t writeAccesses;
+  access_register_t writeAccesses;*/
   ///MODIFICATION END
 
 private:

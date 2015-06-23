@@ -2,17 +2,26 @@
 #define MEMORY_ACCESS_ENTRY_H
 
 #include "../../include/klee/Internal/Module/KInstruction.h"
+#include "Threading.h"
 
 namespace klee
 {
+    //class RaceReport;
+
     class MemoryAccessEntry
     {
+        friend class RaceReport;
     public:
-        MemoryAccessEntry(KInstruction *kInst);
+        MemoryAccessEntry(Thread::thread_id_t thread, VectorClock vc, std::string varName, std::string location, bool write);
         bool operator<(const MemoryAccessEntry &other) const;
-    //private:
-        KInstruction *_kInst;
-        //uint32_t _threadID;
+        bool isRace(const MemoryAccessEntry &other) const;
+        bool isRuntime() const;
+    private:
+        Thread::thread_id_t _thread;
+        VectorClock _vc;
+        std::string _varName;
+        std::string _location;
+        bool _write;
     };
 }
 

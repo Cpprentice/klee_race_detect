@@ -213,64 +213,6 @@ void closeVcLog() {
 }
 
 
-
-/*
-void push_vc(thread_vc_t *in, thread_vc_t *out) {
-    //printf("0x%x -> 0x%x\n", in, out);
-    int i;
-    for (i = 0; i < MAX_THREADS; i++) {
-        if (in->vc[i] > out->vc[i])
-            out->vc[i] = in->vc[i];
-    }
-}
-
-void sync_vc(thread_vc_t *vc1, thread_vc_t *vc2) {
-    push_vc(vc1, vc2);
-    push_vc(vc2, vc1);
-}
-
-void increment_vc(thread_vc_t *in, pthread_t *thread) {
-    //a thread pointer is its own id
-    in->vc[*thread]++;
-}
-
-void clear_vc(thread_vc_t *in) {
-    initVcLog();
-    fprintf(vcLog, "%x %i \n", in, sizeof(thread_vc_t));
-    memset(in, 0, sizeof(thread_vc_t));
-}
-
-void increment_thread_vc() {
-    pthread_t self = pthread_self();
-    thread_data_t *data = &__tsync.threads[self];
-    thread_vc_t *vc = &data->vcs;
-    increment_vc(vc, &self);
-
-    __thread_vc_update(vc, self);
-}
-
-thread_vc_t* getVC(pthread_t thread) {
-    return &__tsync.threads[thread].vcs;
-}
-
-thread_vc_t* get_vc(pthread_t thread) {
-    return &__tsync.threads[thread].vcs;
-}
-
-///Pull new information into the current thread's vc
-void pull_thread_vc(thread_vc_t *input) {
-    pthread_t self = pthread_self();
-    thread_vc_t *vc = get_vc(self);
-    push_vc(input, vc);
-    //printf("&vc: 0x%x\n", vc);
-    __thread_vc_update(vc, self);
-}
-
-///store the current thread's vc in another object
-void push_thread_vc(thread_vc_t *output) {
-    push_vc(get_vc(pthread_self()), output);
-}
-*/
 /*******
     MODIFICATION END
     ********/
@@ -379,7 +321,7 @@ int pthread_join(pthread_t thread, void **value_ptr) {
 
     ///MODIFICATIONS
     vc_thread_pull(tdata->vc);
-    vc_thread_incr();
+    //vc_thread_incr();
     vc_thread_update();
 
     logMyVC("join\t");
@@ -545,7 +487,7 @@ static int _atomic_mutex_lock(mutex_data_t *mdata, char try) {
 
   ///MODIFICATIONS
   vc_thread_pull(mdata->last_vc);
-  vc_thread_incr();
+  //vc_thread_incr();
   vc_thread_update();
   logMyVC("mtx_lock");
   ///MODIFICATIONS END

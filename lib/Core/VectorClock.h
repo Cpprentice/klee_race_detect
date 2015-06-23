@@ -10,8 +10,6 @@
 
 namespace klee
 {
-    //class KInstruction;
-
     class VectorClock
     {
     public:
@@ -22,14 +20,11 @@ namespace klee
         void import(const VectorClock &other);
 
         bool happensBefore(const VectorClock &other) const;
+        bool operator<(const VectorClock &other) const;
 
         std::string toString() const;
-
-        void setOperation(uint32_t threadID, KInstruction *kInst);
     private:
         std::map<uint64_t, uint32_t> _clockMap;
-       // uint32_t _accessThreadID;
-        //KInstruction *_accessInstruction;
     };
 }
 

@@ -3223,10 +3223,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   }
   solver->setTimeout(0);
 
-  ///MODIFICATION
-  //printf("executeMemoryOperation(%s)\n", isWrite ? "write" : "read");
-  ///MODIFICATION END
-
   if (success) {
     const MemoryObject *mo = op.first;
 
@@ -3261,7 +3257,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
           ///MODIFICATION
           //state.handleMemoryWriteAccess((MemoryObject*)mo);
-          state.handleMemoryWriteAccess(wos, target);
+          if (state.handleMemoryWriteAccess(wos, target))
+              interpreterHandler->processTestCase(state, "Race Detected", "suffix");
           ///MODIFICATION END
 
         }
@@ -3275,7 +3272,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
         ///MODIFICATION
         //state.handleMemoryReadAccess((MemoryObject*)mo);
-        state.handleMemoryReadAccess((ObjectState*)os, target);
+        if (state.handleMemoryReadAccess((ObjectState*)os, target))
+            interpreterHandler->processTestCase(state, "Race Detected", "suffix2");
         ///MODIFCATION END
       }
 

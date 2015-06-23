@@ -113,4 +113,36 @@ namespace klee
         }
         return (greaterExists && allLessOrEqual);
     }
+
+    bool VectorClock::operator<(const VectorClock &other) const
+    {
+        std::map<uint64_t, uint32_t>::const_iterator iterA = _clockMap.begin();
+        std::map<uint64_t, uint32_t>::const_iterator iterB = other._clockMap.begin();
+        while (iterA != _clockMap.end() || iterB != other._clockMap.end())
+        {
+            if (iterA == _clockMap.end())
+            {
+                return true;
+            }
+            else if (iterB == other._clockMap.end())
+            {
+                return false;
+            }
+            else
+            {
+                if (iterA->first == iterB->first && iterA->second == iterB->second)
+                {
+                    iterA++;
+                    iterB++;
+                }
+                else if (iterA->first < iterB->first)
+                    return true;
+                else if (iterA->first == iterB->first && iterA->second < iterB->second)
+                    return true;
+                else
+                    return false;
+            }
+        }
+        return false;
+    }
 }

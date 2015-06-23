@@ -507,7 +507,7 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     {
         handleMemoryAccess(mo, mo->lastWriteAccesses);
     }
-*/
+
     void ExecutionState::handleMemoryReadAccess(ObjectState *os, KInstruction *kInst)
     {
         //handleMemoryAccess(os, os->lastReadAccesses, kInst);
@@ -518,7 +518,56 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     {
         //handleMemoryAccess(os, os->lastWriteAccesses, kInst);
         handleMemoryAccess(os, os->writeAccesses, kInst);
+    }*/
+    bool ExecutionState::handleMemoryReadAccess(ObjectState *os, KInstruction *kInst)
+    {
+        return handleMemoryAccess(os, kInst, false);
     }
+
+    bool ExecutionState::handleMemoryWriteAccess(ObjectState *os, KInstruction *kInst)
+    {
+        return handleMemoryAccess(os, kInst, true);
+    }
+
+    bool ExecutionState::handleMemoryAccess(ObjectState *os, KInstruction *kInst, bool write)
+    {
+        std::stringstream ss;
+        ss << kInst->info->file << ":" << kInst->info->line;
+        std::pair<ObjectState::access_iterator_t, bool> insertInfo = os->memOperations.insert(MemoryAccessEntry(crtThread().getTid(),
+                                                                                                                crtThread().vc,
+                                                                                                                os->getObject()->allocSite->getName().str(),
+                                                                                                                ss.str(),
+                                                                                                                write));
+        if (insertInfo.second && !insertInfo.first->isRuntime())
+            return analyzeForRaceCondition(os, insertInfo.first);
+        return false;
+    }
+
+    bool ExecutionState::analyzeForRaceCondition(ObjectState *os, ObjectState::access_iterator_t newElement)
+    {
+        bool needsTest = false;
+        ObjectState::access_iterator_t iter = os->memOperations.begin();
+        while (iter != os->memOperations.end())
+        {
+            if (iter != newElement)
+            {
+                if (iter->isRace(*newElement))
+                {
+                    RaceReport rr(*iter, *newElement);
+                    std::pair<std::set<RaceReport>::iterator, bool> insertState = RaceReport::overallReports.insert(rr);
+                    if (insertState.second)
+                    {
+                        needsTest = true;
+                        klee::klee_message("%u\t%s\n", RaceReport::overallReports.size(), rr.toString().c_str());
+                    }
+                }
+            }
+            iter++;
+        }
+        return needsTest;
+    }
+
+/*
 
     void ExecutionState::handleMemoryAccess(ObjectState *os, ObjectState::access_containter_t &container, KInstruction *kInst)
     {
@@ -634,7 +683,7 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 
         analyzeForRaceCondition(rIter, reads.end(), wIter, writes.end(), os, kInst);
         analyzeForRaceCondition(wIter, writes.end(), wIter, writes.end(), os, kInst);
- */
+ * /
         ObjectState::access_register_t &reads = os->readAccesses;
         ObjectState::access_register_t &writes = os->writeAccesses;
 

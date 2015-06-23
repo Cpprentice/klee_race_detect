@@ -24,9 +24,10 @@
 #include <vector>
 
 ///MODIFICATION
+#include "../../lib/Core/RaceReport.h"
 #include "../../lib/Core/VectorClock.h"
 #include "../../lib/Core/Memory.h"
-#include "../../lib/Core/RaceReport.h"
+
 ///MODIFCIATION END
 
 namespace klee {
@@ -133,14 +134,17 @@ public:
 //  void handleMemoryReadAccess(MemoryObject *mo);
  // void handleMemoryWriteAccess(MemoryObject *mo);
 
-  void handleMemoryWriteAccess(ObjectState *os, KInstruction *kInst);
-  void handleMemoryReadAccess(ObjectState *os, KInstruction *kInst);
-  void handleMemoryAccess(ObjectState *os, ObjectState::access_containter_t &container, KInstruction *kInst);
-  void handleMemoryAccess(ObjectState *os, ObjectState::access_register_t &container, KInstruction *kInst);
+  bool handleMemoryWriteAccess(ObjectState *os, KInstruction *kInst);
+  bool handleMemoryReadAccess(ObjectState *os, KInstruction *kInst);
+  bool handleMemoryAccess(ObjectState *os, KInstruction *kInst, bool write);
+  bool analyzeForRaceCondition(ObjectState *os, ObjectState::access_iterator_t newElement);
 
-  void analyzeForRaceCondition(ObjectState *os, KInstruction *kInst);
+//  void handleMemoryAccess(ObjectState *os, ObjectState::access_containter_t &container, KInstruction *kInst);
+ // void handleMemoryAccess(ObjectState *os, ObjectState::access_register_t &container, KInstruction *kInst);
+
+//  void analyzeForRaceCondition(ObjectState *os, KInstruction *kInst);
   //void analyzeForRaceCondition(MemoryObject *mo);
-  void analyzeForRaceCondition(std::map<uint32_t, VectorClock>::iterator iter1,
+ /* void analyzeForRaceCondition(std::map<uint32_t, VectorClock>::iterator iter1,
                                std::map<uint32_t, VectorClock>::iterator end1,
                                std::map<uint32_t, VectorClock>::iterator iter2,
                                std::map<uint32_t, VectorClock>::iterator end2,
@@ -149,7 +153,7 @@ public:
                                ObjectState::access_register_t::iterator end1,
                                ObjectState::access_register_t::iterator iter2,
                                ObjectState::access_register_t::iterator end2,
-                               ObjectState *os, KInstruction *kInst );
+                               ObjectState *os, KInstruction *kInst );*/
 
  // std::set<RaceReport> reports;
 

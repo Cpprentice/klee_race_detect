@@ -10,17 +10,19 @@
 
 namespace klee
 {
-    struct KInstruction;
-    class ObjectState;
+//    struct KInstruction;
+//    class ObjectState;
 
     class RaceReport
     {
     public:
-        RaceReport(uint32_t thread1, uint32_t thread2, std::string file, int line);
-        RaceReport(uint32_t thread1, uint32_t thread2, KInstruction *kInst, ObjectState *os);
+//        RaceReport(uint32_t thread1, uint32_t thread2, std::string file, int line);
+//        RaceReport(uint32_t thread1, uint32_t thread2, KInstruction *kInst, ObjectState *os);
 
-        RaceReport(uint32_t currentThread, KInstruction *currInst, ObjectState *currState, const MemoryAccessEntry &lastAccess, uint32_t lastThread);
-        RaceReport(uint32_t currentThread, KInstruction *currInst, ObjectState *currState, const MemoryAccessEntry &lastAccess, uint32_t lastThread, const VectorClock &curr, const VectorClock &last);
+//        RaceReport(uint32_t currentThread, KInstruction *currInst, ObjectState *currState, const MemoryAccessEntry &lastAccess, uint32_t lastThread);
+//        RaceReport(uint32_t currentThread, KInstruction *currInst, ObjectState *currState, const MemoryAccessEntry &lastAccess, uint32_t lastThread, const VectorClock &curr, const VectorClock &last);
+
+        RaceReport(const MemoryAccessEntry &last, const MemoryAccessEntry &current);
 
         std::string toString() const;
 
@@ -31,6 +33,9 @@ namespace klee
 
 
     private:
+        MemoryAccessEntry _last;
+        MemoryAccessEntry _current;
+        /*
         uint32_t _thread1;
         uint32_t _thread2;
         std::string _file;
@@ -45,7 +50,9 @@ namespace klee
 
         VectorClock _currVC;
         VectorClock _lastVC;
+        */
     };
+
 
 
 }
