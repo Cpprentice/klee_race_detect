@@ -254,16 +254,18 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   tdata->joinable = 1; // TODO: Read this from an attribute
   tdata->wlist = klee_get_wlist();
 
+
+
   klee_thread_create(newIdx, start_routine, arg);
   *thread = newIdx;
 
   ///MODIFICATION
   vc_thread_push(tdata->vc);
-  vc_incr(tdata->vc, *thread);
-  vc_update(tdata->vc, *thread);
+  vc_incr(tdata->vc, newIdx);
+  vc_update(tdata->vc, newIdx);
   vc_thread_incr();
   vc_thread_update();
-  logVC(*thread, "create");
+  logVC(newIdx, "create");
   logVC(pthread_self(), "create");
   ///MODIFICATION END
 
@@ -321,7 +323,7 @@ int pthread_join(pthread_t thread, void **value_ptr) {
 
     ///MODIFICATIONS
     vc_thread_pull(tdata->vc);
-    //vc_thread_incr();
+    vc_thread_incr();
     vc_thread_update();
 
     logMyVC("join\t");
@@ -487,7 +489,7 @@ static int _atomic_mutex_lock(mutex_data_t *mdata, char try) {
 
   ///MODIFICATIONS
   vc_thread_pull(mdata->last_vc);
-  //vc_thread_incr();
+  vc_thread_incr();
   vc_thread_update();
   logMyVC("mtx_lock");
   ///MODIFICATIONS END
@@ -542,6 +544,7 @@ static int _atomic_mutex_unlock(mutex_data_t *mdata) {
   vc_thread_incr();
   vc_thread_update();
   logMyVC("mtx_unlock");
+  //printf("mutex rt: %u %u %u\n", mdata->last_vc[0], mdata->last_vc[1], mdata->last_vc[2]);
   ///MODIFICATIONS END
 
   if (mdata->queued > 0)

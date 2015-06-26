@@ -128,34 +128,10 @@ public:
   ///MODIFICATION
   void updateVC(uint32_t tid, VectorClock &vc);
 
-  //const VectorClock& getCurrentVC() const;
-  //typedef std::map<uint32_t, VectorClock> access_containter_t;
-//  void handleMemoryAccess(MemoryObject *mo, MemoryObject::access_containter_t& accessContainer);
-//  void handleMemoryReadAccess(MemoryObject *mo);
- // void handleMemoryWriteAccess(MemoryObject *mo);
-
-  bool handleMemoryWriteAccess(ObjectState *os, KInstruction *kInst);
-  bool handleMemoryReadAccess(ObjectState *os, KInstruction *kInst);
-  bool handleMemoryAccess(ObjectState *os, KInstruction *kInst, bool write);
-  bool analyzeForRaceCondition(ObjectState *os, ObjectState::access_iterator_t newElement);
-
-//  void handleMemoryAccess(ObjectState *os, ObjectState::access_containter_t &container, KInstruction *kInst);
- // void handleMemoryAccess(ObjectState *os, ObjectState::access_register_t &container, KInstruction *kInst);
-
-//  void analyzeForRaceCondition(ObjectState *os, KInstruction *kInst);
-  //void analyzeForRaceCondition(MemoryObject *mo);
- /* void analyzeForRaceCondition(std::map<uint32_t, VectorClock>::iterator iter1,
-                               std::map<uint32_t, VectorClock>::iterator end1,
-                               std::map<uint32_t, VectorClock>::iterator iter2,
-                               std::map<uint32_t, VectorClock>::iterator end2,
-                               ObjectState *os, KInstruction *kInst );
-  void analyzeForRaceCondition(ObjectState::access_register_t::iterator iter1,
-                               ObjectState::access_register_t::iterator end1,
-                               ObjectState::access_register_t::iterator iter2,
-                               ObjectState::access_register_t::iterator end2,
-                               ObjectState *os, KInstruction *kInst );*/
-
- // std::set<RaceReport> reports;
+  std::string handleMemoryWriteAccess(ObjectState *os, KInstruction *kInst);
+  std::string handleMemoryReadAccess(ObjectState *os, KInstruction *kInst);
+  std::string handleMemoryAccess(ObjectState *os, KInstruction *kInst, bool write);
+  std::string analyzeForRaceCondition(ObjectState *os, ObjectState::access_iterator_t newElement);
 
   ///MODIFICATION END
 

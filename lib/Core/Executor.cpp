@@ -3257,8 +3257,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
           ///MODIFICATION
           //state.handleMemoryWriteAccess((MemoryObject*)mo);
-          if (state.handleMemoryWriteAccess(wos, target))
-              interpreterHandler->processTestCase(state, "Race Detected", "suffix");
+          std::string race = state.handleMemoryWriteAccess(wos, target);
+          if (!race.empty())
+              interpreterHandler->processTestCase(state, race.c_str(), "race");
           ///MODIFICATION END
 
         }
@@ -3272,8 +3273,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
         ///MODIFICATION
         //state.handleMemoryReadAccess((MemoryObject*)mo);
-        if (state.handleMemoryReadAccess((ObjectState*)os, target))
-            interpreterHandler->processTestCase(state, "Race Detected", "suffix2");
+        std::string race = state.handleMemoryReadAccess((ObjectState*)os, target);
+        if (!race.empty())
+            interpreterHandler->processTestCase(state, race.c_str(), "race");
         ///MODIFCATION END
       }
 

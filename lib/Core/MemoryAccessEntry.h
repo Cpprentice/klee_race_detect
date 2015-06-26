@@ -12,16 +12,18 @@ namespace klee
     {
         friend class RaceReport;
     public:
-        MemoryAccessEntry(Thread::thread_id_t thread, VectorClock vc, std::string varName, std::string location, bool write);
+        MemoryAccessEntry(Thread::thread_id_t thread, VectorClock vc, std::string varName, std::string location, bool write, const ExecutionState *state);
         bool operator<(const MemoryAccessEntry &other) const;
         bool isRace(const MemoryAccessEntry &other) const;
         bool isRuntime() const;
+        bool isSameScheduling(const MemoryAccessEntry &other) const;
     private:
         Thread::thread_id_t _thread;
         VectorClock _vc;
         std::string _varName;
         std::string _location;
         bool _write;
+        std::vector<Thread::thread_id_t> _schedulingHistory;
     };
 }
 
