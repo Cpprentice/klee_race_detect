@@ -139,7 +139,7 @@ ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
 ObjectState::ObjectState(const ObjectState &os)
   : copyOnWriteOwner(0),
   ///MODIFICATION
-  memOperations(os.memOperations),
+  //memOperations(os.memOperations),
   ///MODIFIACTION END
     refCount(0),
     object(os.object),

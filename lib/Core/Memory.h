@@ -164,10 +164,10 @@ class ObjectState {
 
       ///MODIFICATION
 public:
-    typedef std::set<MemoryAccessEntry> access_register_t;
-    typedef std::set<MemoryAccessEntry>::iterator access_iterator_t;
+    //typedef std::set<MemoryAccessEntry> access_register_t;
+    //typedef std::set<MemoryAccessEntry>::iterator access_iterator_t;
 
-    access_register_t memOperations;
+    //access_register_t memOperations;
   ///MODIFICATION END
 
 private:

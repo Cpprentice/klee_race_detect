@@ -126,12 +126,19 @@ public:
   /* Shortcut methods */
 
   ///MODIFICATION
+
+  typedef std::map<ObjectState*, std::set<MemoryAccessEntry> > access_register_t;
+  typedef std::map<ObjectState*, std::set<MemoryAccessEntry> >::iterator access_iterator_t;
+  typedef std::set<MemoryAccessEntry>::iterator access_set_iterator_t;
+
+  access_register_t memoryAccesses;
+
   void updateVC(uint32_t tid, VectorClock &vc);
 
   std::string handleMemoryWriteAccess(ObjectState *os, KInstruction *kInst);
   std::string handleMemoryReadAccess(ObjectState *os, KInstruction *kInst);
   std::string handleMemoryAccess(ObjectState *os, KInstruction *kInst, bool write);
-  std::string analyzeForRaceCondition(ObjectState *os, ObjectState::access_iterator_t newElement);
+  std::string analyzeForRaceCondition(ObjectState *os, access_set_iterator_t newElement);
 
   ///MODIFICATION END
 

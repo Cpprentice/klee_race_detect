@@ -50,8 +50,8 @@ namespace klee
             return false;
         if (_varName != other._varName)
             return false;
-        if (!isSameScheduling(other))
-            return false;
+        //if (!isSameScheduling(other))
+         //   return false;
         if (!_vc.happensBefore(other._vc) && !other._vc.happensBefore(_vc))
             return true;
         return false;

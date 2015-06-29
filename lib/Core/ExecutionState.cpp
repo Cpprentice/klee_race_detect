@@ -115,7 +115,10 @@ ExecutionState::ExecutionState(const ExecutionState& state)
     waitingLists(state.waitingLists),
     wlistCounter(state.wlistCounter),
     preemptions(state.preemptions),
-    schedulingHistory(state.schedulingHistory)
+    schedulingHistory(state.schedulingHistory),
+    ///MODIFICATION
+    memoryAccesses(state.memoryAccesses)
+    ///MODIFICATION END
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
@@ -495,7 +498,7 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     {
         std::stringstream ss;
         ss << kInst->info->file << ":" << kInst->info->line;
-        std::pair<ObjectState::access_iterator_t, bool> insertInfo = os->memOperations.insert(MemoryAccessEntry(crtThread().getTid(),
+        std::pair<access_set_iterator_t, bool> insertInfo = memoryAccesses[os].insert(MemoryAccessEntry(crtThread().getTid(),
                                                                                                                 crtThread().vc,
                                                                                                                 os->getObject()->allocSite->getName().str(),
                                                                                                                 ss.str(),
@@ -506,11 +509,11 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
         return std::string();
     }
 
-    std::string ExecutionState::analyzeForRaceCondition(ObjectState *os, ObjectState::access_iterator_t newElement)
+    std::string ExecutionState::analyzeForRaceCondition(ObjectState *os, access_set_iterator_t newElement)
     {
         std::string needsTest;
-        ObjectState::access_iterator_t iter = os->memOperations.begin();
-        while (iter != os->memOperations.end())
+        access_set_iterator_t iter = memoryAccesses[os].begin();
+        while (iter != memoryAccesses[os].end())
         {
             if (iter != newElement)
             {
