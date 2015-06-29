@@ -260,6 +260,7 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   *thread = newIdx;
 
   ///MODIFICATION
+  vc_clear(tdata->vc); // Clear possible old VC ??, paranoia
   vc_thread_push(tdata->vc);
   vc_incr(tdata->vc, newIdx);
   vc_update(tdata->vc, newIdx);
@@ -540,6 +541,7 @@ static int _atomic_mutex_unlock(mutex_data_t *mdata) {
   mdata->taken = 0;
 
   ///MODIFICATIONS
+  vc_clear(mdata->last_vc); // The actual thread must overwrite mutex VC, not combine it with previous instances
   vc_thread_push(mdata->last_vc);
   vc_thread_incr();
   vc_thread_update();
@@ -667,6 +669,7 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
 static int _atomic_cond_notify(condvar_data_t *cdata, char all) {
   if (cdata->queued > 0) {
         ///MODIFICATION
+        vc_clear(cdata->last_vc); // The actual thread must overwrite cond VC, not combine it with previous instances
         vc_thread_push(cdata->last_vc);
         vc_thread_incr();
         vc_thread_update();
@@ -762,6 +765,9 @@ int pthread_barrier_wait(pthread_barrier_t *barrier) {
       errno = EINVAL;
       return -1;
   }
+
+  if (bdata->left == bdata->init_count)
+    vc_clear(bdata->last_vc); // Clean the barrier VC, if this thread is the first one to use a completely open barrier, to not use old instances
 
   --bdata->left;
 
@@ -1001,8 +1007,11 @@ static int _atomic_rwlock_unlock(rwlock_data_t *rwdata) {
     return -1;
   }
 
-  if (rwdata->writer_taken && rwdata->writer == pthread_self())
+  if (rwdata->writer_taken && rwdata->writer == pthread_self()) {
     rwdata->writer_taken = 0;
+    vc_clear(rwdata->last_vc); // Clear VC
+    vc_thread_push(rwdata->last_vc); //I think only the writerunlock will enforce HB semantics
+  }
   else if (rwdata->writer_taken && rwdata->writer != pthread_self()) {
     errno = EPERM;
     return -1;
@@ -1012,7 +1021,7 @@ static int _atomic_rwlock_unlock(rwlock_data_t *rwdata) {
   }
 
   ///MODIFICATION
-  vc_thread_push(rwdata->last_vc);
+  // VC push moved upwards
   vc_thread_incr();
   vc_thread_update();
   logMyVC("rw_unlock");

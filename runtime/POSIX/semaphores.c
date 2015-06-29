@@ -153,6 +153,7 @@ static int _atomic_sem_unlock(sem_data_t *sdata) {
 
   if (sdata->count <= 0) {
     ///MODIFICATION
+    vc_clear(sdata->last_vc); // Clean VC
     vc_thread_push(sdata->last_vc);
     vc_thread_incr();
     vc_thread_update();
