@@ -71,18 +71,20 @@ typedef uint64_t wlist_id_t;
     MODIFICATIONS
     ******/
 
-typedef uint32_t vc_t[MAX_THREADS];
+typedef uint64_t vc_t;
+
+//typedef uint32_t vc_t[MAX_THREADS];
 
 void vc_clear(vc_t in);
 void vc_push(vc_t in, vc_t out);
 void vc_incr(vc_t in, pthread_t thread);
-uint32_t* vc_get(pthread_t thread);
-void vc_update(vc_t in, pthread_t thread);
+uint64_t vc_get(pthread_t thread);
+//void vc_update(vc_t in, pthread_t thread);
 
 void vc_thread_incr();
 void vc_thread_push(vc_t out);
 void vc_thread_pull(vc_t in);
-void vc_thread_update();
+//void vc_thread_update();
 
 /******
     MODIFICATIONS END
@@ -190,7 +192,7 @@ static inline void __thread_preempt(int yield) {
     klee_thread_vc_update(&vc->vc, thread, foo());
 
 }*/
-
+/*
 static inline void __thread_vc_update(vc_t vc, pthread_t thread)
 {
     printf("rt: %u %u %u\n", vc[0], vc[1], vc[2]);
@@ -201,6 +203,7 @@ static inline void __thread_vc_update(vc_t vc, pthread_t thread)
     //printf("rt: %u %u %u\n", temp[0], temp[1], temp[2]);
     klee_thread_vc_update(vc, thread, MAX_THREADS);
 }
+*/
 ///MODIFICATION END
 
 static inline void __thread_sleep(uint64_t wlist) {

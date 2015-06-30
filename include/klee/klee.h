@@ -157,6 +157,12 @@ extern "C" {
 
   ///MODIFICATION
   void klee_thread_vc_update(uint32_t *vc, uint32_t thread, uint32_t maxThreads);
+
+  void klee_vector_clock_create(uint64_t *vcid);
+  void klee_vector_clock_increment(uint64_t vcid, uint64_t tid);
+  void klee_vector_clock_push(uint64_t source, uint64_t target);
+  void klee_vector_clock_clear(uint64_t vcid);
+
   ///MODIFICATION END
 
   void klee_thread_sleep(uint64_t wlist);

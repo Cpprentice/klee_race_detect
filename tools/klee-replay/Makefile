@@ -11,7 +11,7 @@ LEVEL=../..
 TOOLNAME = klee-replay
 
 USEDLIBS = kleeBasic.a
-LINK_COMPONENTS = 
+LINK_COMPONENTS =
 NO_PEDANTIC=1
 
 include $(LEVEL)/Makefile.common

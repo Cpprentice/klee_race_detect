@@ -5,8 +5,23 @@
 
 #include "../../include/klee/Internal/Module/KInstruction.h"
 
+#include "Common.h"
+
 namespace klee
 {
+    //std::map<uint64_t, VectorClock> VectorClock::globalVectorClocks;
+
+    uint64_t VectorClock::createVectorClock(std::map<uint64_t, VectorClock> &container)
+    {
+        static uint64_t id = 1;
+        container[id];
+        //globalVectorClocks[id];
+        //klee::klee_message("created VectorClock %llu", globalVectorClocks.size());
+        return id++;
+    }
+
+
+
     VectorClock::VectorClock(uint32_t *vc, uint32_t size)
     {
         for (uint32_t i = 0; i < size; i++)
@@ -144,5 +159,15 @@ namespace klee
             }
         }
         return false;
+    }
+
+    void VectorClock::clear()
+    {
+        _clockMap.clear();
+    }
+
+    uint32_t& VectorClock::operator[](uint64_t index)
+    {
+        return _clockMap[index];
     }
 }

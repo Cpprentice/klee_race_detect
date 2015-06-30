@@ -130,10 +130,12 @@ public:
   typedef std::map<ObjectState*, std::set<MemoryAccessEntry> > access_register_t;
   typedef std::map<ObjectState*, std::set<MemoryAccessEntry> >::iterator access_iterator_t;
   typedef std::set<MemoryAccessEntry>::iterator access_set_iterator_t;
-
   access_register_t memoryAccesses;
 
-  void updateVC(uint32_t tid, VectorClock &vc);
+  typedef std::map<uint64_t, VectorClock> vector_clock_register_t;
+  vector_clock_register_t vectorClockRegister;
+
+  //void updateVC(uint32_t tid, VectorClock &vc);
 
   std::string handleMemoryWriteAccess(ObjectState *os, KInstruction *kInst);
   std::string handleMemoryReadAccess(ObjectState *os, KInstruction *kInst);

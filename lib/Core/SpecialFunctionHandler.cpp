@@ -99,6 +99,10 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("klee_thread_preempt", handleThreadPreempt, false),
   ///MODIFICATION
   add("klee_thread_vc_update", handleThreadVCUpdate, false),
+  add("klee_vector_clock_clear", handleVectorClockClear, false),
+  add("klee_vector_clock_create", handleVectorClockCreate, false),
+  add("klee_vector_clock_push", handleVectorClockPush, false),
+  add("klee_vector_clock_increment", handleVectorClockIncrement, false),
   ///MODIFICATION END
   add("klee_thread_sleep", handleThreadSleep, false),
   add("klee_warning", handleWarning, false),
@@ -860,7 +864,7 @@ void SpecialFunctionHandler::handleThreadVCUpdate(ExecutionState &state,
 
     VectorClock vectorClock(vc, maxThreads);
 
-    state.updateVC(tid, vectorClock);
+ //   state.updateVC(tid, vectorClock);
 
 //    print_memory(&vc, 8);
  //   print_memory(vc, 4*16);
@@ -1001,4 +1005,67 @@ bool SpecialFunctionHandler::writeConcreteValue(ExecutionState &state,
 
     return true;
 }
+
+///MODIFICATION
+
+void SpecialFunctionHandler::handleVectorClockClear(ExecutionState &state, KInstruction *target, std::vector<ref<Expr> > &arguments)
+{
+    assert(arguments.size() == 1 && "invalid number of arguments to klee_vector_clock_clear");
+
+    uint64_t vcid = cast<ConstantExpr>(arguments[0])->getZExtValue();
+    //VectorClock::globalVectorClocks[vcid].clear();
+    state.vectorClockRegister[vcid].clear();
+
+    //klee_message("state: 0x%x->handleClear: %lu", &state, vcid);
+}
+void SpecialFunctionHandler::handleVectorClockCreate(ExecutionState &state, KInstruction *target, std::vector<ref<Expr> > &arguments)
+{
+    assert(arguments.size() == 1 && "invalid number of arguments to klee_vector_clock_create");
+    ref<Expr> vcidAddr = executor.toUnique(state, arguments[0]);
+
+    if (!isa<ConstantExpr>(vcidAddr)) {
+        executor.terminateStateOnError(state,
+                "klee_vector_clock_create requires constant args",
+                "user.err");
+        return;
+    }
+
+
+    uint64_t vcid = VectorClock::createVectorClock(state.vectorClockRegister);
+    //klee_message("state: 0x%x->handleCreate: %lu", &state, vcid);
+
+    if (!vcidAddr->isZero()) {
+        if (!writeConcreteValue(state, vcidAddr, vcid,
+                    executor.getWidthForLLVMType(Type::getInt64Ty(getGlobalContext()))))
+            return;
+    }
+}
+void SpecialFunctionHandler::handleVectorClockIncrement(ExecutionState &state, KInstruction *target, std::vector<ref<Expr> > &arguments)
+{
+    assert(arguments.size() == 2 && "invalid number of arguments to klee_vector_clock_increment");
+
+    uint64_t vcid = cast<ConstantExpr>(arguments[0])->getZExtValue();
+    uint64_t tid = cast<ConstantExpr>(arguments[1])->getZExtValue();
+
+    //VectorClock::globalVectorClocks[vcid][tid]++;
+    state.vectorClockRegister[vcid][tid]++;
+
+
+    //klee_message("state: 0x%x->handleIncr: %lu: %s", &state, vcid, state.vectorClockRegister[vcid].toString().c_str());
+}
+void SpecialFunctionHandler::handleVectorClockPush(ExecutionState &state, KInstruction *target, std::vector<ref<Expr> > &arguments)
+{
+    assert(arguments.size() == 2 && "invalid number of arguments to klee_vector_clock_push");
+
+    uint64_t sourceId = cast<ConstantExpr>(arguments[0])->getZExtValue();
+    uint64_t targetId = cast<ConstantExpr>(arguments[1])->getZExtValue();
+
+    //VectorClock::globalVectorClocks[targetId].import(VectorClock::globalVectorClocks[sourceId]);
+    state.vectorClockRegister[targetId].import(state.vectorClockRegister[sourceId]);
+
+
+    //klee_message("state: 0x%x->handlePush: %lu->%lu: %s", &state, sourceId, targetId, state.vectorClockRegister[targetId].toString().c_str());
+}
+
+///MODIFICATION END
 

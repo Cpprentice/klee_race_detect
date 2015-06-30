@@ -113,7 +113,7 @@ private:
   thread_id_t tid;
 
   ///MODIFICATION
-    VectorClock vc;
+    uint64_t vc;
   ///MODIFICATION END
 public:
   Thread(thread_id_t tid, KFunction *start_function);

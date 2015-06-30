@@ -75,6 +75,9 @@ StackFrame::~StackFrame() {
 Thread::Thread(thread_id_t tid, KFunction * kf) :
   enabled(true), waitingList(0) {
   this->tid = tid;
+  ///MODIFICATION
+  this->vc = tid+1;
+  ///MODIFICATION END
 
   if (kf) {
     stack.push_back(StackFrame(0, kf));

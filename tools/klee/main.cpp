@@ -758,7 +758,13 @@ static const char *modelledExternals[] = {
   "klee_alias_function",
   "klee_stack_trace",
   "klee_thread_create",
+  ///MODIFICATION
+  "klee_vector_clock_clear",
+  "klee_vector_clock_increment",
+  "klee_vector_clock_create",
+  "klee_vector_clock_push",
   "klee_thread_vc_update",
+  ///MODIFICATION END
   "klee_thread_notify",
   "klee_thread_preempt",
   "klee_thread_sleep",

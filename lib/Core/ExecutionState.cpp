@@ -117,7 +117,8 @@ ExecutionState::ExecutionState(const ExecutionState& state)
     preemptions(state.preemptions),
     schedulingHistory(state.schedulingHistory),
     ///MODIFICATION
-    memoryAccesses(state.memoryAccesses)
+    memoryAccesses(state.memoryAccesses),
+    vectorClockRegister(state.vectorClockRegister)
     ///MODIFICATION END
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
@@ -459,7 +460,7 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 ///MODIFICATION
 
 #include "Common.h"
-
+/*
     void ExecutionState::updateVC(uint32_t tid, VectorClock &vc)
     {
         //llvm::errs() << "called updateVC\n";
@@ -478,12 +479,12 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
             llvm::raw_string_ostream msg(Str);
             msg << "state: " << this << " thread: "<< tid  << "\t(" << iter->second.vc.toString() << ")";
 
-            klee::klee_message("%s", msg.str().c_str());*/
+            klee::klee_message("%s", msg.str().c_str());* /
             //llvm::errs() << "thread: " << tid << " vc: " << vc.toString();
         }
 
     }
-
+*/
     std::string ExecutionState::handleMemoryReadAccess(ObjectState *os, KInstruction *kInst)
     {
         return handleMemoryAccess(os, kInst, false);
@@ -499,7 +500,7 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
         std::stringstream ss;
         ss << kInst->info->file << ":" << kInst->info->line;
         std::pair<access_set_iterator_t, bool> insertInfo = memoryAccesses[os].insert(MemoryAccessEntry(crtThread().getTid(),
-                                                                                                                crtThread().vc,
+                                                                                                                vectorClockRegister[crtThread().vc],
                                                                                                                 os->getObject()->allocSite->getName().str(),
                                                                                                                 ss.str(),
                                                                                                                 write,

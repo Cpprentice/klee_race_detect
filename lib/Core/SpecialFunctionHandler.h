@@ -140,6 +140,10 @@ namespace klee {
     HANDLER(handleThreadPreempt);
     ///MODIFICATION
     HANDLER(handleThreadVCUpdate);
+    HANDLER(handleVectorClockCreate);
+    HANDLER(handleVectorClockPush);
+    HANDLER(handleVectorClockIncrement);
+    HANDLER(handleVectorClockClear);
     ///MODIFICATION END
     HANDLER(handleThreadSleep);
     HANDLER(handleThreadTerminate);

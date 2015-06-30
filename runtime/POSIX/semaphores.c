@@ -88,7 +88,7 @@ int sem_init(sem_posix_t *sem, int pshared, unsigned int value) {
   sdata->count = value;
 
   ///MODIFICATION
-  vc_clear(sdata->last_vc);
+  klee_vector_clock_create(&sdata->last_vc);
   ///MODIFICATION END
 
   return 0;
@@ -114,7 +114,7 @@ static int _atomic_sem_lock(sem_data_t *sdata, char try) {
       ///MODIFICATION
       vc_thread_pull(sdata->last_vc);
       vc_thread_incr();
-      vc_thread_update();
+      //vc_thread_update();
       ///MODIFICATION END
     }
   }
@@ -156,7 +156,7 @@ static int _atomic_sem_unlock(sem_data_t *sdata) {
     vc_clear(sdata->last_vc); // Clean VC
     vc_thread_push(sdata->last_vc);
     vc_thread_incr();
-    vc_thread_update();
+    //vc_thread_update();
     ///MODIFICATON END
     __thread_notify_one(sdata->wlist);
   }

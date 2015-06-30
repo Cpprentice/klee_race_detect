@@ -23,11 +23,16 @@ namespace klee
             return true;
         if (equalThread && equalVar && _location < other._location)
             return true;
-        if (equalThread && equalVar && equalLocation && _write < other._write)
+        /*if (equalThread && equalVar && equalLocation && _write < other._write)
             return true;
         if (equalThread && equalVar && equalLocation && equalWrite && _schedulingHistory < other._schedulingHistory)
             return true;
         if (equalThread && equalVar && equalLocation && equalWrite && equalScheduling && _vc < other._vc)
+            return true;
+            */
+        if (equalThread && equalVar && equalLocation && _schedulingHistory < other._schedulingHistory)
+            return true;
+        if (equalThread && equalVar && equalLocation && equalScheduling && _vc < other._vc)
             return true;
         return false;
     }

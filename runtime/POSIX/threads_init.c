@@ -50,9 +50,6 @@
 
 #include <klee/klee.h>
 
-///MODIFICATION
-#include <stdio.h>
-///MODIFIACTION END
 
 ////////////////////////////////////////////////////////////////////////////////
 // Threads
@@ -72,11 +69,9 @@ void klee_init_threads(void) {
         slot->wlist = 0;
 
         ///MODIFICATONS
-        memset(slot->vc, 0, sizeof(vc_t));
-
-        //make the initial thread start with a 1 as VectorClock since 0 has a special meaning
+        klee_vector_clock_create(&slot->vc);
         if (i == DEFAULT_THREAD)
-            slot->vc[DEFAULT_THREAD]++;
+            klee_vector_clock_increment(slot->vc, i);
         ///MODIFICATIONS END
     }
 
