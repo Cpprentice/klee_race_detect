@@ -3256,10 +3256,18 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           wos->write(offset, value);
 
           ///MODIFICATION
+
+          uint64_t addr = cast<ConstantExpr>(address)->getZExtValue();
+          uint64_t off = cast<ConstantExpr>(offset)->getZExtValue();
+
           //state.handleMemoryWriteAccess((MemoryObject*)mo);
           std::string race = state.handleMemoryWriteAccess(wos, target);
           if (!race.empty())
+          {
+              printf("%lu %lu\n", addr, off);
               interpreterHandler->processTestCase(state, race.c_str(), "race");
+          }
+
           ///MODIFICATION END
 
         }
@@ -3272,10 +3280,18 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         bindLocal(target, state, result);
 
         ///MODIFICATION
+
+          uint64_t addr = cast<ConstantExpr>(address)->getZExtValue();
+          uint64_t off = cast<ConstantExpr>(offset)->getZExtValue();
+
         //state.handleMemoryReadAccess((MemoryObject*)mo);
         std::string race = state.handleMemoryReadAccess((ObjectState*)os, target);
         if (!race.empty())
+        {
+            printf("%lu %lu\n", addr, off);
             interpreterHandler->processTestCase(state, race.c_str(), "race");
+        }
+
         ///MODIFCATION END
       }
 
