@@ -27,7 +27,7 @@
 #include "../../lib/Core/RaceReport.h"
 #include "../../lib/Core/VectorClock.h"
 #include "../../lib/Core/Memory.h"
-
+#include "../../../intervaltree/IntervalTree.h"
 ///MODIFCIATION END
 
 namespace klee {
@@ -127,20 +127,18 @@ public:
 
   ///MODIFICATION
 
-  typedef std::map<ObjectState*, std::set<MemoryAccessEntry> > access_register_t;
-  typedef std::map<ObjectState*, std::set<MemoryAccessEntry> >::iterator access_iterator_t;
-  typedef std::set<MemoryAccessEntry>::iterator access_set_iterator_t;
-  access_register_t memoryAccesses;
+  typedef std::vector<Interval<MemoryAccessEntry> > memory_access_register_t;
+  memory_access_register_t memoryAccesses;
+
+  size_t findOverlappingMemoryIntervals(memory_access_register_t &overlapping, size_t start, size_t stop);
 
   typedef std::map<uint64_t, VectorClock> vector_clock_register_t;
   vector_clock_register_t vectorClockRegister;
 
-  //void updateVC(uint32_t tid, VectorClock &vc);
-
-  std::string handleMemoryWriteAccess(ObjectState *os, KInstruction *kInst);
-  std::string handleMemoryReadAccess(ObjectState *os, KInstruction *kInst);
-  std::string handleMemoryAccess(ObjectState *os, KInstruction *kInst, bool write);
-  std::string analyzeForRaceCondition(ObjectState *os, access_set_iterator_t newElement);
+    std::string handleMemoryWriteAccess(size_t address, size_t length, ObjectState *os, KInstruction *kInst);
+    std::string handleMemoryReadAccess(size_t address, size_t length, ObjectState *os, KInstruction *kInst);
+    std::string handleMemoryAccess(size_t address, size_t length, ObjectState *os, KInstruction *kInst, bool write);
+    std::string analyzeForRaceCondition(Interval<MemoryAccessEntry> &newEntry);
 
   ///MODIFICATION END
 

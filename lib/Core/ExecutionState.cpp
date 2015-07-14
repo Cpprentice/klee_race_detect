@@ -460,76 +460,68 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 ///MODIFICATION
 
 #include "Common.h"
-/*
-    void ExecutionState::updateVC(uint32_t tid, VectorClock &vc)
+
+    std::string ExecutionState::handleMemoryReadAccess(size_t address, size_t length, ObjectState *os, KInstruction *kInst)
     {
-        //llvm::errs() << "called updateVC\n";
-        std::map<Thread::thread_id_t, Thread>::iterator iter = threads.find(tid);
-        //Thread& value =
-
-        //value.vc.import(vc);
-        if (iter == threads.end())
-            llvm::errs() << "updateVC error\n";
-            //printf("updateVC Error\n");
-        else
-        {
-            //printf("happens before? %i\n", iter->second.vc.happensBefore(vc));
-            iter->second.vc.import(vc);
-            /*std::string Str;
-            llvm::raw_string_ostream msg(Str);
-            msg << "state: " << this << " thread: "<< tid  << "\t(" << iter->second.vc.toString() << ")";
-
-            klee::klee_message("%s", msg.str().c_str());* /
-            //llvm::errs() << "thread: " << tid << " vc: " << vc.toString();
-        }
-
-    }
-*/
-    std::string ExecutionState::handleMemoryReadAccess(ObjectState *os, KInstruction *kInst)
-    {
-        return handleMemoryAccess(os, kInst, false);
+        return handleMemoryAccess(address, length, os, kInst, false);
     }
 
-    std::string ExecutionState::handleMemoryWriteAccess(ObjectState *os, KInstruction *kInst)
+    std::string ExecutionState::handleMemoryWriteAccess(size_t address, size_t length, ObjectState *os, KInstruction *kInst)
     {
-        return handleMemoryAccess(os, kInst, true);
+        return handleMemoryAccess(address, length, os, kInst, true);
     }
 
-    std::string ExecutionState::handleMemoryAccess(ObjectState *os, KInstruction *kInst, bool write)
+    std::string ExecutionState::handleMemoryAccess(size_t address, size_t length, ObjectState *os, KInstruction *kInst, bool write)
     {
         std::stringstream ss;
-        ss << kInst->info->file << ":" << kInst->info->line;
-        std::pair<access_set_iterator_t, bool> insertInfo = memoryAccesses[os].insert(MemoryAccessEntry(crtThread().getTid(),
-                                                                                                                vectorClockRegister[crtThread().vc],
-                                                                                                                os->getObject()->allocSite->getName().str(),
-                                                                                                                ss.str(),
-                                                                                                                write,
-                                                                                                                this));
-        if (insertInfo.second && !insertInfo.first->isRuntime())
-            return analyzeForRaceCondition(os, insertInfo.first);
-        return std::string();
+        if (kInst && kInst->info)
+            ss << kInst->info->file << ":" << kInst->info->line;
+
+        MemoryAccessEntry newEntry(crtThread().getTid(), vectorClockRegister[crtThread().vc], os->getObject()->allocSite->getName().str(), ss.str(), write, this);
+        Interval<MemoryAccessEntry> newInterval(address, address + length - 1, newEntry);
+
+        std::string raceInfo;
+        if (!newEntry.isRuntime())
+        {
+            raceInfo = analyzeForRaceCondition(newInterval);
+            memoryAccesses.push_back(newInterval);
+        }
+        return raceInfo;
     }
 
-    std::string ExecutionState::analyzeForRaceCondition(ObjectState *os, access_set_iterator_t newElement)
+    size_t ExecutionState::findOverlappingMemoryIntervals(memory_access_register_t &overlapping, size_t start, size_t stop)
+    {
+        for (size_t i = 0; i < memoryAccesses.size(); i++)
+        {
+            const Interval<MemoryAccessEntry>& interval = memoryAccesses[i];
+            if (interval.stop >= start && interval.start <= stop)
+                overlapping.push_back(interval);
+        }
+        return overlapping.size();
+    }
+
+    std::string ExecutionState::analyzeForRaceCondition(Interval<MemoryAccessEntry> &newEntry)
     {
         std::string needsTest;
-        access_set_iterator_t iter = memoryAccesses[os].begin();
-        while (iter != memoryAccesses[os].end())
+
+
+        memory_access_register_t overlapping;
+        findOverlappingMemoryIntervals(overlapping, newEntry.start, newEntry.stop);
+
+        typename memory_access_register_t::iterator iter = overlapping.begin();
+        while (iter != overlapping.end())
         {
-            if (iter != newElement)
+            if (iter->value.isRace(newEntry.value))
             {
-                if (iter->isRace(*newElement))
+                RaceReport rr(iter->value, newEntry.value);
+                std::pair<std::set<RaceReport>::iterator, bool> insertState = RaceReport::overallReports.insert(rr);
+                if (insertState.second)
                 {
-                    RaceReport rr(*iter, *newElement);
-                    std::pair<std::set<RaceReport>::iterator, bool> insertState = RaceReport::overallReports.insert(rr);
-                    if (insertState.second)
-                    {
-                        std::stringstream ss;
-                        ss << "Detected Race #" << RaceReport::overallReports.size() << ":\n"
-                            << rr.toString() << "\n";
-                        needsTest = ss.str();
-                        klee::klee_message("%s", needsTest.c_str());
-                    }
+                    std::stringstream ss;
+                    ss << "Detected Race #" << RaceReport::overallReports.size() << ":\n"
+                        << rr.toString() << "\n";
+                    needsTest += ss.str();
+                    klee::klee_message("%s", needsTest.c_str());
                 }
             }
             iter++;

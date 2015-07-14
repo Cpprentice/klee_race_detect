@@ -3258,13 +3258,13 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           ///MODIFICATION
 
           uint64_t addr = cast<ConstantExpr>(address)->getZExtValue();
-          uint64_t off = cast<ConstantExpr>(offset)->getZExtValue();
+          //uint64_t off = cast<ConstantExpr>(offset)->getZExtValue();
 
           //state.handleMemoryWriteAccess((MemoryObject*)mo);
-          std::string race = state.handleMemoryWriteAccess(wos, target);
+          std::string race = state.handleMemoryWriteAccess(addr, bytes, wos, target);
           if (!race.empty())
           {
-              printf("%lu %lu\n", addr, off);
+              //printf("%lu %lu\n", addr, off);
               interpreterHandler->processTestCase(state, race.c_str(), "race");
           }
 
@@ -3282,13 +3282,13 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         ///MODIFICATION
 
           uint64_t addr = cast<ConstantExpr>(address)->getZExtValue();
-          uint64_t off = cast<ConstantExpr>(offset)->getZExtValue();
+          //uint64_t off = cast<ConstantExpr>(offset)->getZExtValue();
 
         //state.handleMemoryReadAccess((MemoryObject*)mo);
-        std::string race = state.handleMemoryReadAccess((ObjectState*)os, target);
+        std::string race = state.handleMemoryReadAccess(addr, bytes, (ObjectState*)os, target);
         if (!race.empty())
         {
-            printf("%lu %lu\n", addr, off);
+            //printf("%lu %lu\n", addr, off);
             interpreterHandler->processTestCase(state, race.c_str(), "race");
         }
 
@@ -3755,10 +3755,12 @@ void Executor::executeThreadCreate(ExecutionState &state, Thread::thread_id_t ti
     KFunction *kf = resolveFunction(start_function);
     assert(kf && "cannot resolve thread start function");
 
-    std::string Str;
-    llvm::raw_string_ostream msg(Str);
-    msg << "Creating thread: " << tid  << " Function: " << kf->function->getName().str() << " Parent: "<< state.crtThreadIt->second.tid;
-    klee_message("%s", msg.str().c_str());
+    ///MODIFICATION
+//    std::string Str;
+//    llvm::raw_string_ostream msg(Str);
+//    msg << "Creating thread: " << tid  << " Function: " << kf->function->getName().str() << " Parent: "<< state.crtThreadIt->second.tid;
+//    klee_message("%s", msg.str().c_str());
+    ///MODIFICATION END
 
     Thread &t = state.createThread(tid, kf);
 
@@ -3771,7 +3773,9 @@ void Executor::executeThreadCreate(ExecutionState &state, Thread::thread_id_t ti
 
 void Executor::executeThreadExit(ExecutionState &state) {
     //terminate this thread and schedule another one
-    klee_message("Exiting thread: %lu", state.crtThreadIt->second.tid);
+    ///MODIFICATION
+    //klee_message("Exiting thread: %lu", state.crtThreadIt->second.tid);
+    ///MODIFICATION END
 
     if (state.threads.size() == 1) {
         klee_message("Terminating state");
