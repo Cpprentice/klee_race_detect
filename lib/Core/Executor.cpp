@@ -3329,10 +3329,24 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         } else {
           ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
           wos->write(mo->getOffsetExpr(address), value);
+
+          ///MODIFICATION
+          uint64_t addr = cast<ConstantExpr>(address)->getZExtValue();
+          std::string race = state.handleMemoryWriteAccess(addr, bytes, (ObjectState*)os, target);
+          if (!race.empty())
+            interpreterHandler->processTestCase(state, race.c_str(), "race");
+          ///MODIFCATION END
         }
       } else {
         ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
         bindLocal(target, *bound, result);
+        ///MODIFICATION
+        uint64_t addr = cast<ConstantExpr>(address)->getZExtValue();
+        std::string race = state.handleMemoryReadAccess(addr, bytes, (ObjectState*)os, target);
+        if (!race.empty())
+            interpreterHandler->processTestCase(state, race.c_str(), "race");
+
+        ///MODIFCATION END
       }
     }
 

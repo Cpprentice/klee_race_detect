@@ -222,6 +222,10 @@ int pthread_join(pthread_t thread, void **value_ptr) {
 
   memset(&__tsync.threads[thread], 0, sizeof(__tsync.threads[thread]));
 
+  ///MODIFICATION
+  __thread_preempt(0);
+  ///MODIFICATION
+
   return 0;
 }
 

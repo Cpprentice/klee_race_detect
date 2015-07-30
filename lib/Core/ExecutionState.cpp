@@ -70,8 +70,11 @@ void ExecutionState::setupMain(KFunction *kf) {
     crtThreadIt = threads.begin();
 
     ///MODIFICATION
-    uint32_t initVC = 1;
-    VectorClock vc(&initVC, 1);
+ //   uint32_t initVC = 1;
+ //   VectorClock vc(&initVC, 1);
+
+
+
     ///MODIFCATION END
 }
 
@@ -473,18 +476,35 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 
     std::string ExecutionState::handleMemoryAccess(size_t address, size_t length, ObjectState *os, KInstruction *kInst, bool write)
     {
-        std::stringstream ss;
-        if (kInst && kInst->info)
-            ss << kInst->info->file << ":" << kInst->info->line;
 
-        MemoryAccessEntry newEntry(crtThread().getTid(), vectorClockRegister[crtThread().vc], os->getObject()->allocSite->getName().str(), ss.str(), write, this);
-        Interval<MemoryAccessEntry> newInterval(address, address + length - 1, newEntry);
 
         std::string raceInfo;
-        if (!newEntry.isRuntime())
+        typename vector_clock_register_t::iterator vectorClockIterator = vectorClockRegister.find(crtThread().vc);
+        if (vectorClockIterator != vectorClockRegister.end())
         {
-            raceInfo = analyzeForRaceCondition(newInterval);
-            memoryAccesses.push_back(newInterval);
+            std::stringstream ss;
+            if (kInst && kInst->info)
+                ss << kInst->info->file << ":" << kInst->info->line;
+
+            std::string varName;
+            if (os == 0)
+                klee_message("Invalid Object State in ExecutionState::handleMemoryAccess");
+            else if (os->getObject() == 0)
+                klee_message("Invalid MemoryObject for ObjectState in ExecutionState::handleMemoryAccess");
+            else if (os->getObject()->allocSite == 0)
+                klee_message("Invalid allocSite for MemoryObject in ExecutionState::handleMemoryAccess");
+            else
+                varName = os->getObject()->allocSite->getName().str();
+
+            MemoryAccessEntry newEntry(crtThread().getTid(), vectorClockRegister[crtThread().vc], varName, ss.str(), write, this);
+            Interval<MemoryAccessEntry> newInterval(address, address + length - 1, newEntry);
+
+
+            if (!newEntry.isRuntime())
+            {
+                raceInfo = analyzeForRaceCondition(newInterval);
+                memoryAccesses.push_back(newInterval);
+            }
         }
         return raceInfo;
     }
@@ -521,7 +541,8 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
                     ss << "Detected Race #" << RaceReport::overallReports.size() << ":\n"
                         << rr.toString() << "\n";
                     needsTest += ss.str();
-                    klee::klee_message("%s", needsTest.c_str());
+                    klee::klee_message("%s", ss.str().c_str());
+                    klee::klee_message("0x%x 0x%x", newEntry.start, iter->start);
                 }
             }
             iter++;

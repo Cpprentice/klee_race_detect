@@ -13,11 +13,15 @@ namespace klee
 
     uint64_t VectorClock::createVectorClock(std::map<uint64_t, VectorClock> &container)
     {
-        static uint64_t id = 1;
-        container[id];
+        //static uint64_t id = 1;
+        //container[id];
+        //klee_message("creating vc. container size: %lu", container.size());
+        //if (container.size() != 1)
+            container[container.size() + 1];
         //globalVectorClocks[id];
         //klee::klee_message("created VectorClock %llu", globalVectorClocks.size());
-        return id++;
+        //return id++;
+        return container.size();
     }
 
 
